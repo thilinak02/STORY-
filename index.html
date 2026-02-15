@@ -3,68 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORY Messenger PRO</title>
+    <title>STORY Messenger</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --viber: #7360f2; --bg: #f0f2f5; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg); }
-        .screen { display: none; height: 100vh; flex-direction: column; }
-        .active { display: flex; }
-        
-        /* Login Card */
-        .login-box { background: white; padding: 40px 20px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 85%; max-width: 400px; margin: auto; text-align: center; }
-        .v-btn { background: var(--viber); color: white; border: none; padding: 15px; width: 100%; border-radius: 30px; font-weight: bold; font-size: 16px; margin-top: 20px; cursor: pointer; }
-        
-        /* Header */
-        header { background: var(--viber); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 20px; }
-        
-        /* User List */
-        .user-card { background: white; margin: 10px; padding: 15px; border-radius: 15px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .profile-pic { width: 50px; height: 50px; background: #ddd; border-radius: 50%; overflow: hidden; }
-        .profile-pic img { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* Stickers Footer */
-        .sticker-bar { background: white; padding: 10px; display: flex; justify-content: space-around; border-top: 1px solid #ddd; position: fixed; bottom: 0; width: 100%; }
-        .stk { font-size: 30px; cursor: pointer; transition: 0.2s; }
-        .stk:hover { transform: scale(1.2); }
+        :root { --viber: #7360f2; }
+        body { font-family: sans-serif; background: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 85%; max-width: 350px; }
+        input { width: 100%; margin-bottom: 15px; }
+        .v-btn { background: var(--viber); color: white; border: none; padding: 15px; width: 100%; border-radius: 25px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen" class="screen active">
-        <div class="login-box">
-            <h1 style="color:var(--viber); margin-bottom:10px;">STORY</h1>
-            <p style="color:#666;">නියම Messenger අත්දැකීම</p>
-            <input type="tel" id="phone" style="width:100%;">
-            <div id="recaptcha-container" style="margin-top:15px;"></div>
-            <button class="v-btn" id="send-btn" onclick="sendOTP()">SMS එවන්න</button>
-        </div>
-    </div>
-
-    <div id="main-screen" class="screen">
-        <header>
-            <span>STORY</span>
-            <div style="font-size:12px; opacity:0.8;" id="my-num"></div>
-        </header>
-        
-        <div id="user-list" style="flex:1; overflow-y:auto; padding-bottom: 80px;">
-            <p style="text-align:center; color:#888; margin-top:20px;">සක්‍රීය පරිශීලකයන් සොයමින්...</p>
-        </div>
-
-        <div class="sticker-bar">
-            <span class="stk" onclick="sendSticker('❤️')">❤️</span>
-            <span class="stk" onclick="sendSticker('😂')">😂</span>
-            <span class="stk" onclick="sendSticker('🔥')">🔥</span>
-            <span class="stk" onclick="sendSticker('👋')">👋</span>
-            <span class="stk" onclick="invite()">➕</span>
-        </div>
+    <div class="card" id="auth-card">
+        <h1 style="color:var(--viber)">STORY</h1>
+        <p>දුරකථන අංකය ඇතුළත් කරන්න</p>
+        <input type="tel" id="phone">
+        <div id="recaptcha-container"></div>
+        <button class="v-btn" onclick="sendOTP()">SMS එවන්න</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
     <script>
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
             authDomain: "story-ceca0.firebaseapp.com",
@@ -76,64 +40,34 @@
         };
         firebase.initializeApp(firebaseConfig);
 
-        const input = document.querySelector("#phone");
-        const iti = window.intlTelInput(input, { initialCountry: "lk", separateDialCode: true });
-
-        // reCAPTCHA එක පාරක් පමණක් සෙට් කිරීම
-        window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { 'size': 'invisible' });
+        const phoneInput = document.querySelector("#phone");
+        const iti = window.intlTelInput(phoneInput, {
+            initialCountry: "lk",
+            separateDialCode: true,
+            utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js",
+        });
 
         function sendOTP() {
-            const num = iti.getNumber();
-            if(!num) return alert("කරුණාකර අංකය ඇතුළත් කරන්න");
+            const phoneNumber = iti.getNumber();
+            if (!iti.isValidNumber()) {
+                alert("කරුණාකර නිවැරදි දුරකථන අංකයක් ඇතුළත් කරන්න!");
+                return;
+            }
 
-            firebase.auth().signInWithPhoneNumber(num, window.recaptchaVerifier)
-                .then(res => {
-                    window.confirmationResult = res;
-                    const otp = prompt("ඔබේ දුරකථනයට ආ අංක 6 මෙතන ඇතුළත් කරන්න:");
-                    if(otp) {
-                        res.confirm(otp).then(userRes => {
-                            loginSuccess(userRes.user.phoneNumber);
-                        }).catch(() => alert("වැරදි OTP අංකයක්!"));
-                    }
-                }).catch(err => alert("දෝෂයක්: " + err.message));
-        }
+            window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
 
-        function loginSuccess(number) {
-            document.getElementById('my-num').innerText = number;
-            firebase.database().ref("users/" + number.replace('+', '')).set({
-                status: "online",
-                lastSeen: Date.now()
-            });
-            document.getElementById('login-screen').classList.remove('active');
-            document.getElementById('main-screen').classList.add('active');
-            loadUsers();
-        }
-
-        function loadUsers() {
-            firebase.database().ref("users").on("value", snap => {
-                const list = document.getElementById('user-list');
-                list.innerHTML = "";
-                snap.forEach(child => {
-                    list.innerHTML += `
-                        <div class="user-card">
-                            <div class="profile-pic"><img src="https://ui-avatars.com/api/?name=${child.key}&background=random"></div>
-                            <div style="flex:1">
-                                <strong>+${child.key}</strong><br>
-                                <small style="color:green">Online</small>
-                            </div>
-                            <button style="border:none; background:none; color:var(--viber); font-weight:bold;">CHAT</button>
-                        </div>`;
+            firebase.auth().signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier)
+                .then((confirmationResult) => {
+                    const code = prompt("ඔබේ පෝන් එකට ආ අංක 6 මෙතන ගහන්න:");
+                    return confirmationResult.confirm(code);
+                })
+                .then(() => {
+                    alert("සාර්ථකව ලොග් වුණා!");
+                    // මීළඟට Chat Screen එකට යන්න මෙතනට Code එක දාන්න පුළුවන්
+                })
+                .catch((error) => {
+                    alert("දෝෂයක්: " + error.message);
                 });
-            });
-        }
-
-        function sendSticker(s) {
-            alert("STORY Sticker යැව්වා: " + s);
-        }
-
-        function invite() {
-            const n = prompt("Invite කරන්න අවශ්‍ය නම්බර් එක (+94...):");
-            if(n) window.open(`https://wa.me/${n.replace('+', '')}?text=Join me on STORY Messenger: ${window.location.href}`);
         }
     </script>
 </body>

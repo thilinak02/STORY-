@@ -8,22 +8,31 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #7360f2; }
-        .card { background: white; padding: 30px; border-radius: 20px; width: 85%; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; }
-        button { background: #7360f2; color: white; border: none; padding: 15px; width: 100%; border-radius: 25px; font-weight: bold; cursor: pointer; }
+        :root { --viber: #7360f2; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; width: 85%; max-width: 380px; }
+        h1 { color: var(--viber); margin-bottom: 5px; }
+        p { color: #666; font-size: 14px; margin-bottom: 20px; }
+        .v-btn { background: var(--viber); color: white; border: none; padding: 15px; width: 100%; border-radius: 30px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        .v-btn:hover { background: #5a4ad1; }
+        #phone { margin-bottom: 15px; }
     </style>
 </head>
 <body>
+
     <div class="card">
-        <h2>STORY</h2>
-        <input type="tel" id="phone">
-        <div id="recaptcha-container"></div>
-        <button onclick="sendOTP()">SMS එවන්න</button>
+        <h1>STORY</h1>
+        <p>ඔබේ ගිණුමට ඇතුළු වීමට දුරකථන අංකය ඇතුළත් කරන්න</p>
+        
+        <input type="tel" id="phone" style="width: 100%;">
+        <div id="recaptcha-container" style="margin-top: 10px;"></div>
+        
+        <button class="v-btn" onclick="sendOTP()">ඇතුළු වන්න (Log In)</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
     <script>
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
             authDomain: "story-ceca0.firebaseapp.com",
@@ -35,19 +44,40 @@
         firebase.initializeApp(firebaseConfig);
 
         const phoneInput = document.querySelector("#phone");
-        const iti = window.intlTelInput(phoneInput, { initialCountry: "lk", separateDialCode: true });
+        const iti = window.intlTelInput(phoneInput, {
+            initialCountry: "lk",
+            separateDialCode: true,
+            utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js",
+        });
 
         function sendOTP() {
             const phoneNumber = iti.getNumber();
-            if (!phoneNumber) { alert("කරුණාකර අංකය ඇතුළත් කරන්න!"); return; }
-
-            window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
             
-            firebase.auth().signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier)
-                .then(res => {
-                    const otp = prompt("ඔබේ දුරකථනයට ආ අංක 6 මෙතන ඇතුළත් කරන්න:");
-                    res.confirm(otp).then(() => alert("සාර්ථකයි!"));
-                }).catch(err => alert("දෝෂයක්: " + err.message));
+            // නම්බර් එක හරියටම තියෙනවද කියලා බලනවා
+            if (!iti.isValidNumber()) {
+                alert("කරුණාකර නිවැරදි දුරකථන අංකයක් ඇතුළත් කරන්න!");
+                return;
+            }
+
+            // Confirm window එකක් දාමු
+            const confirmLogin = confirm(phoneNumber + " අංකය නිවැරදිද? SMS එකක් ලබාගැනීමට 'OK' ඔබන්න.");
+            
+            if (confirmLogin) {
+                window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
+
+                firebase.auth().signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier)
+                    .then((confirmationResult) => {
+                        const code = prompt("ඔබේ ජංගම දුරකථනයට ලැබුණු අංක 6 මෙතන ඇතුළත් කරන්න:");
+                        return confirmationResult.confirm(code);
+                    })
+                    .then(() => {
+                        alert("සාර්ථකව ඇතුළු වුණා! දැන් ඔබට චැට් කළ හැකියි.");
+                        window.location.reload(); // මෙතනට පස්සේ Chat Screen එක ලෝඩ් වෙන්න හදන්න පුළුවන්
+                    })
+                    .catch((error) => {
+                        alert("දෝෂයක්: " + error.message);
+                    });
+            }
         }
     </script>
 </body>

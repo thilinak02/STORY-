@@ -3,117 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORY Messenger v2</title>
+    <title>STORY Messenger v4</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --wa-green: #25D366; --wa-dark: #075E54; }
-        body { font-family: sans-serif; margin: 0; background: #f0f2f5; }
-        .container { max-width: 400px; margin: auto; height: 100vh; display: flex; flex-direction: column; background: white; }
+        :root { --main: #7360f2; --chat-bg: #e5ddd5; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; overflow: hidden; }
         .hidden { display: none; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 20px; border: 1px solid #ddd; box-sizing: border-box; }
-        .btn-main { background: var(--wa-green); color: white; font-weight: bold; border: none; cursor: pointer; }
-        header { background: var(--wa-dark); color: white; padding: 15px; text-align: center; }
-        #chat-box { flex: 1; overflow-y: auto; padding: 15px; background: #e5ddd5; }
-        .msg { padding: 8px 12px; border-radius: 10px; margin-bottom: 5px; max-width: 70%; word-wrap: break-word; }
-        .sent { background: #dcf8c6; align-self: flex-end; margin-left: auto; }
+        .screen { height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Login UI */
+        .login-box { background: white; padding: 30px; border-radius: 20px; width: 85%; max-width: 350px; margin: auto; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 25px; border: 1px solid #ddd; box-sizing: border-box; }
+        .btn { background: var(--main); color: white; border: none; padding: 12px; width: 100%; border-radius: 25px; font-weight: bold; cursor: pointer; }
+
+        /* Chat UI */
+        header { background: var(--main); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .contact-list { flex: 1; overflow-y: auto; background: white; }
+        .contact { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .contact img { width: 45px; height: 45px; border-radius: 50%; background: #ddd; margin-right: 15px; }
+        
+        /* Private Chat Box */
+        .chat-area { flex: 1; overflow-y: auto; padding: 15px; background: var(--chat-bg); background-size: cover; display: flex; flex-direction: column; }
+        .msg { padding: 10px; border-radius: 12px; margin-bottom: 8px; max-width: 75%; font-size: 14px; }
+        .sent { background: #dcf8c6; align-self: flex-end; }
         .rec { background: white; align-self: flex-start; }
+
+        /* Settings Popup */
+        .settings { position: absolute; top: 60px; right: 10px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 100; width: 220px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="auth-screen" style="padding: 20px;">
-        <h2 style="text-align:center; color: var(--wa-dark);">STORY Messenger</h2>
-        <div id="login-form">
-            <h3>ඇතුළු වන්න (Login)</h3>
-            <input type="text" id="log-user" placeholder="Username">
-            <input type="password" id="log-pass" placeholder="Password">
-            <button class="btn-main" onclick="login()">Login</button>
-            <p onclick="toggleAuth()" style="text-align:center; cursor:pointer; color:blue;">අලුත් ගිණුමක් හදන්න (Sign Up)</p>
+    <div id="auth-screen" class="screen">
+        <div class="login-box">
+            <h1 style="color:var(--main)">STORY</h1>
+            <div id="login-div">
+                <input type="text" id="l-user" placeholder="Username">
+                <input type="password" id="l-pass" placeholder="Password">
+                <button class="btn" onclick="login()">Log In</button>
+                <p onclick="toggleAuth()" style="color:blue; cursor:pointer; font-size:13px; margin-top:10px;">ගිණුමක් හදන්න (Sign Up)</p>
+            </div>
+            <div id="sign-div" class="hidden">
+                <input type="text" id="s-user" placeholder="Create Username">
+                <input type="password" id="s-pass" placeholder="Create Password">
+                <input type="text" id="s-img" placeholder="Profile Pic Link (URL)">
+                <button class="btn" onclick="signup()" style="background:#25D366">Sign Up</button>
+                <p onclick="toggleAuth()" style="color:blue; cursor:pointer; font-size:13px; margin-top:10px;">Login වෙන්න</p>
+            </div>
         </div>
-        <div id="signup-form" class="hidden">
-            <h3>ගිණුමක් හදන්න (Sign Up)</h3>
-            <input type="text" id="sign-user" placeholder="Choose Username">
-            <input type="password" id="sign-pass" placeholder="Create Password">
-            <input type="text" id="sign-img" placeholder="Profile Photo URL (Link)">
-            <button class="btn-main" onclick="signup()">Sign Up</button>
-            <p onclick="toggleAuth()" style="text-align:center; cursor:pointer; color:blue;">දැනටමත් ගිණුමක් තිබේ නම් (Login)</p>
+    </div>
+
+    <div id="main-screen" class="screen hidden">
+        <header>
+            <span>STORY</span>
+            <button onclick="toggleSet()" style="background:none; border:none; color:white; font-size:20px;">⚙️</button>
+        </header>
+        <div id="settings-box" class="settings hidden">
+            <h4 style="margin:0">පෙනුම වෙනස් කරන්න</h4>
+            <input type="color" id="theme-col" onchange="applyStyle()">
+            <input type="text" id="bg-url" placeholder="Wallpaper Link" onchange="applyStyle()">
+            <button class="btn" style="padding:5px; margin-top:5px;" onclick="toggleSet()">Done</button>
+        </div>
+        <div class="contact-list" id="contacts"></div>
+    </div>
+
+    <div id="private-chat" class="screen hidden">
+        <header>
+            <button onclick="backToMain()" style="background:none; border:none; color:white;">⬅</button>
+            <span id="chatting-with">Name</span>
+            <span></span>
+        </header>
+        <div class="chat-area" id="msg-area"></div>
+        <div style="padding:10px; background:white; display:flex; gap:10px;">
+            <input type="text" id="mInput" placeholder="Type..." style="margin:0;">
+            <button onclick="sendMsg()" style="width:50px; border-radius:50%; background:var(--main); color:white; border:none;">➔</button>
         </div>
     </div>
 
-    <div id="chat-screen" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
-        <header id="chat-header">STORY Chat</header>
-        <div id="chat-box"></div>
-        <div style="padding: 10px; display: flex; gap: 5px;">
-            <input type="text" id="msgInput" placeholder="Type a message..." style="margin: 0;">
-            <button onclick="sendMsg()" style="width: 60px; margin: 0; background: var(--wa-green); color: white; border: none; border-radius: 50%;">➔</button>
-        </div>
-    </div>
-</div>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
+            databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com",
+            projectId: "story-ceca0"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let me = "", other = "";
 
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
-        databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com",
-        projectId: "story-ceca0"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    let currentUser = null;
+        function toggleAuth() { document.getElementById('login-div').classList.toggle('hidden'); document.getElementById('sign-div').classList.toggle('hidden'); }
+        function toggleSet() { document.getElementById('settings-box').classList.toggle('hidden'); }
 
-    function toggleAuth() {
-        document.getElementById('login-form').classList.toggle('hidden');
-        document.getElementById('signup-form').classList.toggle('hidden');
-    }
+        function signup() {
+            const u = document.getElementById('s-user').value;
+            const p = document.getElementById('s-pass').value;
+            const img = document.getElementById('s-img').value || "https://via.placeholder.com/50";
+            if(u && p) { db.ref('users/'+u).set({pass:p, img:img}); alert("හරි! දැන් Login වෙන්න."); toggleAuth(); }
+        }
 
-    function signup() {
-        const u = document.getElementById('sign-user').value;
-        const p = document.getElementById('sign-pass').value;
-        const img = document.getElementById('sign-img').value;
-        if(!u || !p) return alert("කරුණාකර සියල්ල පුරවන්න!");
-
-        db.ref('users/' + u).set({ password: p, photo: img }, (err) => {
-            if(!err) { alert("ගිණුම සාර්ථකව හැදුවා! දැන් Login වන්න."); toggleAuth(); }
-        });
-    }
-
-    function login() {
-        const u = document.getElementById('log-user').value;
-        const p = document.getElementById('log-pass').value;
-
-        db.ref('users/' + u).once('value', snap => {
-            if(snap.exists() && snap.val().password === p) {
-                currentUser = u;
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('chat-screen').classList.remove('hidden');
-                document.getElementById('chat-header').innerText = "Logged in as: " + u;
-                loadMessages();
-            } else {
-                alert("Username හෝ Password වැරදියි!");
-            }
-        });
-    }
-
-    function sendMsg() {
-        const txt = document.getElementById('msgInput').value;
-        if(!txt || !currentUser) return;
-        db.ref('global_chat').push({ user: currentUser, text: txt, time: Date.now() });
-        document.getElementById('msgInput').value = "";
-    }
-
-    function loadMessages() {
-        db.ref('global_chat').on('value', snap => {
-            const box = document.getElementById('chat-box');
-            box.innerHTML = "";
-            snap.forEach(m => {
-                const d = m.val();
-                const cls = d.user === currentUser ? 'sent' : 'rec';
-                box.innerHTML += `<div class="msg ${cls}"><b>${d.user}:</b><br>${d.text}</div>`;
+        function login() {
+            const u = document.getElementById('l-user').value;
+            const p = document.getElementById('l-pass').value;
+            db.ref('users/'+u).once('value', snap => {
+                if(snap.exists() && snap.val().pass == p) {
+                    me = u; document.getElementById('auth-screen').classList.add('hidden');
+                    document.getElementById('main-screen').classList.remove('hidden');
+                    loadContacts();
+                } else alert("වැරදියි!");
             });
-            box.scrollTop = box.scrollHeight;
-        });
-    }
-</script>
+        }
+
+        function loadContacts() {
+            db.ref('users').on('value', snap => {
+                const con = document.getElementById('contacts'); con.innerHTML = "";
+                snap.forEach(child => {
+                    if(child.key != me) {
+                        con.innerHTML += `<div class="contact" onclick="startChat('${child.key}')">
+                            <img src="${child.val().img}"><b>${child.key}</b></div>`;
+                    }
+                });
+            });
+        }
+
+        function startChat(user) {
+            other = user; document.getElementById('main-screen').classList.add('hidden');
+            document.getElementById('private-chat').classList.remove('hidden');
+            document.getElementById('chatting-with').innerText = user;
+            loadMsgs();
+        }
+
+        function backToMain() { document.getElementById('private-chat').classList.add('hidden'); document.getElementById('main-screen').classList.remove('hidden'); }
+
+        function sendMsg() {
+            const txt = document.getElementById('mInput').value; if(!txt) return;
+            const id = me < other ? me+"_"+other : other+"_"+me;
+            db.ref('chats/'+id).push({s:me, t:txt}); document.getElementById('mInput').value = "";
+        }
+
+        function loadMsgs() {
+            const id = me < other ? me+"_"+other : other+"_"+me;
+            db.ref('chats/'+id).on('value', snap => {
+                const area = document.getElementById('msg-area'); area.innerHTML = "";
+                snap.forEach(m => {
+                    const d = m.val(); const cls = d.s == me ? 'sent' : 'rec';
+                    area.innerHTML += `<div class="msg ${cls}">${d.t}</div>`;
+                });
+                area.scrollTop = area.scrollHeight;
+            });
+        }
+
+        function applyStyle() {
+            const col = document.getElementById('theme-col').value;
+            const bg = document.getElementById('bg-url').value;
+            document.documentElement.style.setProperty('--main', col);
+            if(bg) document.getElementById('msg-area').style.backgroundImage = `url('${bg}')`;
+        }
+    </script>
 </body>
 </html>

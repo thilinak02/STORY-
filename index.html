@@ -10,29 +10,44 @@
     <style>
         :root { --viber: #7360f2; }
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        
+        /* Main Card */
         .card { background: white; padding: 30px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; width: 85%; max-width: 380px; }
         h1 { color: var(--viber); margin-bottom: 5px; }
-        p { color: #666; font-size: 14px; margin-bottom: 20px; }
-        .v-btn { background: var(--viber); color: white; border: none; padding: 15px; width: 100%; border-radius: 30px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; }
-        .v-btn:hover { background: #5a4ad1; }
-        #phone { margin-bottom: 15px; }
+        .v-btn { background: var(--viber); color: white; border: none; padding: 15px; width: 100%; border-radius: 30px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 15px; }
+
+        /* Popup (Modal) Styles */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal { background: white; padding: 25px; border-radius: 20px; width: 80%; max-width: 300px; text-align: center; }
+        .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btn { flex: 1; padding: 12px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; }
+        .accept-btn { background: var(--viber); color: white; }
+        .cancel-btn { background: #eee; color: #333; }
     </style>
 </head>
 <body>
 
     <div class="card">
         <h1>STORY</h1>
-        <p>ඔබේ ගිණුමට ඇතුළු වීමට දුරකථන අංකය ඇතුළත් කරන්න</p>
-        
+        <p style="color:#666; font-size:14px;">ඉදිරියට යාමට ඔබේ අංකය ඇතුළත් කරන්න</p>
         <input type="tel" id="phone" style="width: 100%;">
-        <div id="recaptcha-container" style="margin-top: 10px;"></div>
-        
-        <button class="v-btn" onclick="sendOTP()">ඇතුළු වන්න (Log In)</button>
+        <div id="recaptcha-container"></div>
+        <button class="v-btn" onclick="showPopup()">ලොග් වන්න (Log In)</button>
+    </div>
+
+    <div class="modal-overlay" id="popup">
+        <div class="modal">
+            <h3 style="margin-top:0;">තහවුරු කරන්න</h3>
+            <p id="confirm-msg" style="font-size:14px; color:#555;"></p>
+            <div class="modal-btns">
+                <button class="modal-btn cancel-btn" onclick="hidePopup()">මකන්න</button>
+                <button class="modal-btn accept-btn" onclick="finalLogin()">එකඟයි (Accept)</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
     <script>
-        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
             authDomain: "story-ceca0.firebaseapp.com",
@@ -44,40 +59,30 @@
         firebase.initializeApp(firebaseConfig);
 
         const phoneInput = document.querySelector("#phone");
-        const iti = window.intlTelInput(phoneInput, {
-            initialCountry: "lk",
-            separateDialCode: true,
-            utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js",
-        });
+        const iti = window.intlTelInput(phoneInput, { initialCountry: "lk", separateDialCode: true });
 
-        function sendOTP() {
+        function showPopup() {
+            const num = iti.getNumber();
+            if (!iti.isValidNumber()) return alert("කරුණාකර නිවැරදි අංකයක් ඇතුළත් කරන්න!");
+            
+            document.getElementById('confirm-msg').innerText = num + " අංකය නිවැරදිද? SMS එකක් ලබාගෙන ඉදිරියට යමුද?";
+            document.getElementById('popup').style.display = 'flex';
+        }
+
+        function hidePopup() { document.getElementById('popup').style.display = 'none'; }
+
+        function finalLogin() {
+            hidePopup();
             const phoneNumber = iti.getNumber();
-            
-            // නම්බර් එක හරියටම තියෙනවද කියලා බලනවා
-            if (!iti.isValidNumber()) {
-                alert("කරුණාකර නිවැරදි දුරකථන අංකයක් ඇතුළත් කරන්න!");
-                return;
-            }
+            window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
 
-            // Confirm window එකක් දාමු
-            const confirmLogin = confirm(phoneNumber + " අංකය නිවැරදිද? SMS එකක් ලබාගැනීමට 'OK' ඔබන්න.");
-            
-            if (confirmLogin) {
-                window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
-
-                firebase.auth().signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier)
-                    .then((confirmationResult) => {
-                        const code = prompt("ඔබේ ජංගම දුරකථනයට ලැබුණු අංක 6 මෙතන ඇතුළත් කරන්න:");
-                        return confirmationResult.confirm(code);
-                    })
-                    .then(() => {
-                        alert("සාර්ථකව ඇතුළු වුණා! දැන් ඔබට චැට් කළ හැකියි.");
-                        window.location.reload(); // මෙතනට පස්සේ Chat Screen එක ලෝඩ් වෙන්න හදන්න පුළුවන්
-                    })
-                    .catch((error) => {
-                        alert("දෝෂයක්: " + error.message);
-                    });
-            }
+            firebase.auth().signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier)
+                .then(res => {
+                    const code = prompt("OTP අංකය ඇතුළත් කරන්න:");
+                    return res.confirm(code);
+                })
+                .then(() => { alert("සාර්ථකයි!"); window.location.reload(); })
+                .catch(err => alert("දෝෂයක්: " + err.message));
         }
     </script>
 </body>

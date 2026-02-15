@@ -3,87 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORY Messenger</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css">
+    <title>STORY App</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
     <style>
         :root { --viber: #7360f2; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        
-        /* Main Card */
-        .card { background: white; padding: 30px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; width: 85%; max-width: 380px; }
-        h1 { color: var(--viber); margin-bottom: 5px; }
-        .v-btn { background: var(--viber); color: white; border: none; padding: 15px; width: 100%; border-radius: 30px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 15px; }
-
-        /* Popup (Modal) Styles */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal { background: white; padding: 25px; border-radius: 20px; width: 80%; max-width: 300px; text-align: center; }
-        .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
-        .modal-btn { flex: 1; padding: 12px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; }
-        .accept-btn { background: var(--viber); color: white; }
-        .cancel-btn { background: #eee; color: #333; }
+        body { font-family: sans-serif; margin: 0; background: #f0f2f5; }
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+        .tab-item { flex: 1; padding: 15px; text-align: center; font-weight: bold; cursor: pointer; color: #666; }
+        .tab-item.active { color: var(--viber); border-top: 3px solid var(--viber); }
+        .page { display: none; padding: 20px; padding-bottom: 80px; }
+        .active-page { display: block; }
+        .profile-img { width: 80px; height: 80px; border-radius: 50%; background: #ddd; margin: 0 auto 10px; display: block; object-fit: cover; }
+        .story-card { background: white; padding: 15px; border-radius: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h1>STORY</h1>
-        <p style="color:#666; font-size:14px;">ඉදිරියට යාමට ඔබේ අංකය ඇතුළත් කරන්න</p>
-        <input type="tel" id="phone" style="width: 100%;">
-        <div id="recaptcha-container"></div>
-        <button class="v-btn" onclick="showPopup()">ලොග් වන්න (Log In)</button>
+    <div id="profile-page" class="page active-page">
+        <h2 style="text-align:center;">මගේ ගිණුම</h2>
+        <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="profile-img" id="user-img">
+        <input type="text" id="user-name" placeholder="ඔබේ නම" style="width:100%; padding:10px; margin-bottom:10px;">
+        <button onclick="saveProfile()" style="width:100%; padding:10px; background:var(--viber); color:white; border:none; border-radius:10px;">සේව් කරන්න</button>
     </div>
 
-    <div class="modal-overlay" id="popup">
-        <div class="modal">
-            <h3 style="margin-top:0;">තහවුරු කරන්න</h3>
-            <p id="confirm-msg" style="font-size:14px; color:#555;"></p>
-            <div class="modal-btns">
-                <button class="modal-btn cancel-btn" onclick="hidePopup()">මකන්න</button>
-                <button class="modal-btn accept-btn" onclick="finalLogin()">එකඟයි (Accept)</button>
-            </div>
-        </div>
+    <div id="story-page" class="page">
+        <h2>කෙටි කථා (Stories)</h2>
+        <textarea id="story-text" placeholder="ඔබේ කථාව මෙතන ලියන්න..." style="width:100%; height:100px; padding:10px; border-radius:10px;"></textarea>
+        <button onclick="postStory()" style="width:100%; padding:10px; background:var(--viber); color:white; border:none; border-radius:10px; margin-top:10px;">Post කරන්න</button>
+        <div id="story-list" style="margin-top:20px;"></div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
+    <div class="tab-bar">
+        <div class="tab-item active" onclick="showPage('profile-page', this)">Profile</div>
+        <div class="tab-item" onclick="showPage('chat-page', this)">Chats</div>
+        <div class="tab-item" onclick="showPage('story-page', this)">Stories</div>
+    </div>
+
     <script>
+        // Firebase Config (මම කලින් දීපු එකම මෙතනට දාන්න)
         const firebaseConfig = {
             apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
-            authDomain: "story-ceca0.firebaseapp.com",
-            projectId: "story-ceca0",
-            storageBucket: "story-ceca0.firebasestorage.app",
-            messagingSenderId: "820075788039",
-            appId: "1:820075788039:web:076857bff62a48759a77a2"
+            databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com",
+            projectId: "story-ceca0"
         };
         firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        const phoneInput = document.querySelector("#phone");
-        const iti = window.intlTelInput(phoneInput, { initialCountry: "lk", separateDialCode: true });
-
-        function showPopup() {
-            const num = iti.getNumber();
-            if (!iti.isValidNumber()) return alert("කරුණාකර නිවැරදි අංකයක් ඇතුළත් කරන්න!");
-            
-            document.getElementById('confirm-msg').innerText = num + " අංකය නිවැරදිද? SMS එකක් ලබාගෙන ඉදිරියට යමුද?";
-            document.getElementById('popup').style.display = 'flex';
+        function showPage(pageId, el) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
+            document.getElementById(pageId).classList.add('active-page');
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
         }
 
-        function hidePopup() { document.getElementById('popup').style.display = 'none'; }
-
-        function finalLogin() {
-            hidePopup();
-            const phoneNumber = iti.getNumber();
-            window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
-
-            firebase.auth().signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier)
-                .then(res => {
-                    const code = prompt("OTP අංකය ඇතුළත් කරන්න:");
-                    return res.confirm(code);
-                })
-                .then(() => { alert("සාර්ථකයි!"); window.location.reload(); })
-                .catch(err => alert("දෝෂයක්: " + err.message));
+        function postStory() {
+            const txt = document.getElementById('story-text').value;
+            const user = document.getElementById('user-name').value || "Unknown";
+            if(!txt) return;
+            db.ref("stories").push({ user: user, text: txt, time: Date.now() });
+            document.getElementById('story-text').value = "";
+            alert("කථාව පළ කළා!");
         }
+
+        // ලෝඩ් වෙද්දී Stories ටික පෙන්වන්න
+        db.ref("stories").on("value", snap => {
+            const list = document.getElementById('story-list');
+            list.innerHTML = "";
+            snap.forEach(s => {
+                const d = s.val();
+                list.innerHTML += `<div class="story-card"><b>${d.user}</b><p>${d.text}</p></div>`;
+            });
+        });
     </script>
 </body>
 </html>

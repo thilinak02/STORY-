@@ -23,7 +23,7 @@
         .msg { padding: 10px; border-radius: 15px; margin-bottom: 8px; max-width: 75%; font-size: 14px; word-wrap: break-word; }
         .sent { background: #dcf8c6; align-self: flex-end; }
         .rec { background: white; align-self: flex-start; }
-        .story-card { background: white; padding: 15px; margin: 10px; border-radius: 15px; }
+        .story-card { background: white; padding: 15px; margin: 10px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
@@ -31,17 +31,17 @@
     <div id="auth-page" style="padding: 50px 20px; text-align: center;">
         <h1 style="color:var(--main); font-size: 45px;">STORY</h1>
         <div id="login-div">
-            <input type="number" id="l-phone" placeholder="Phone Number">
-            <input type="password" id="l-pass" placeholder="Password">
-            <button onclick="login()" style="background:var(--main); color:white;">Log In</button>
-            <p onclick="toggleAuth(true)" style="color:blue; cursor:pointer;">ගිණුමක් සාදන්න</p>
+            <input type="number" id="l-phone" placeholder="Phone Number (දුරකථන අංකය)">
+            <input type="password" id="l-pass" placeholder="Password (මුරපදය)">
+            <button onclick="login()" style="background:var(--main); color:white; border:none;">Log In</button>
+            <p onclick="toggleAuth(true)" style="color:blue; cursor:pointer; margin-top:15px;">අලුත් ගිණුමක් සාදන්න</p>
         </div>
         <div id="sign-div" class="hidden">
-            <input type="text" id="s-name" placeholder="Name">
+            <input type="text" id="s-name" placeholder="ඔබේ නම">
             <input type="number" id="s-phone" placeholder="Phone Number">
             <input type="password" id="s-pass" placeholder="Password">
-            <button onclick="signup()" style="background:#2ecc71; color:white;">Sign Up</button>
-            <p onclick="toggleAuth(false)" style="color:blue; cursor:pointer;">Login වෙත යන්න</p>
+            <button onclick="signup()" style="background:#2ecc71; color:white; border:none;">Sign Up</button>
+            <p onclick="toggleAuth(false)" style="color:blue; cursor:pointer; margin-top:15px;">Login වෙත යන්න</p>
         </div>
     </div>
 
@@ -54,18 +54,18 @@
 
         <div id="page-stories" class="page hidden">
             <div class="card">
-                <textarea id="story-txt" placeholder="අද මොකද වෙන්නේ?"></textarea>
-                <button onclick="postStory()" style="background:var(--main); color:white;">Post Story</button>
+                <textarea id="story-txt" style="height:80px;" placeholder="අද මොකද වෙන්නේ?"></textarea>
+                <button onclick="postStory()" style="background:var(--main); color:white; border:none;">Post Story</button>
             </div>
             <div id="story-feed"></div>
         </div>
 
         <div id="page-profile" class="page hidden">
             <div class="card" style="text-align:center;">
-                <img id="my-img" src="" class="avatar" style="width:100px; height:100px; border:2px solid var(--main);">
-                <input type="text" id="edit-name" placeholder="Name">
-                <input type="text" id="edit-img" placeholder="Photo URL">
-                <button onclick="updateProfile()" style="background:var(--main); color:white;">Update Profile</button>
+                <img id="my-img" src="" class="avatar" style="width:100px; height:100px; border:2px solid var(--main); margin-bottom:10px;">
+                <input type="text" id="edit-name" placeholder="නම">
+                <input type="text" id="edit-img" placeholder="Photo URL (පින්තූර ලින්ක් එක)">
+                <button onclick="updateProfile()" style="background:var(--main); color:white; border:none;">Save Profile</button>
             </div>
         </div>
 
@@ -77,10 +77,7 @@
     </div>
 
     <div id="chat-win" class="hidden" style="position:fixed; top:0; width:100%; height:100vh; background:white; z-index:200;">
-        <header style="padding:10px;">
-            <button onclick="closeChat()" style="background:none; border:none; color:white; font-size:20px; width:auto;">⬅</button> 
-            <span id="chat-target" style="margin-left:10px;">Chat</span>
-        </header>
+        <header><button onclick="closeChat()" style="background:none; border:none; color:white; font-size:20px; width:auto;">⬅</button> <span id="chat-target"></span> <span></span></header>
         <div id="msg-container" class="msg-box"></div>
         <div style="padding:10px; display:flex; gap:5px; background:white; border-top:1px solid #eee;">
             <input type="text" id="m-in" placeholder="මැසේජ් එකක්..." style="margin:0">
@@ -124,7 +121,7 @@
             const pw = document.getElementById('s-pass').value;
             if(n && p && pw) {
                 db.ref('users/'+p).set({name:n, pass:pw, phone:p, img:"https://cdn-icons-png.flaticon.com/512/149/149071.png"})
-                .then(() => { alert("සාර්ථකයි!"); toggleAuth(false); });
+                .then(() => { alert("සාර්ථකයි! දැන් ලොග් වෙන්න."); toggleAuth(false); });
             }
         }
 
@@ -140,14 +137,12 @@
                     document.getElementById('edit-img').value = d.img;
                 }
             });
-            loadContacts();
-            loadStories();
+            loadContacts(); loadStories();
         }
 
         function loadContacts() {
             db.ref('users').on('value', s => {
-                const list = document.getElementById('contact-list');
-                list.innerHTML = "";
+                const list = document.getElementById('contact-list'); list.innerHTML = "";
                 s.forEach(u => {
                     if(u.key !== me) {
                         list.innerHTML += `<div class="contact-item" onclick="openChat('${u.key}', '${u.val().name}')">
@@ -160,17 +155,13 @@
         }
 
         function openChat(u, n) {
-            other = u;
-            document.getElementById('chat-target').innerText = n;
+            other = u; document.getElementById('chat-target').innerText = n;
             document.getElementById('chat-win').classList.remove('hidden');
             const id = me < other ? me+"_"+other : other+"_"+me;
-            db.ref('chats/'+id).off(); // පරණ ඒක නවත්තන්න
             db.ref('chats/'+id).on('value', s => {
-                const b = document.getElementById('msg-container');
-                b.innerHTML = "";
+                const b = document.getElementById('msg-container'); b.innerHTML = "";
                 s.forEach(m => {
-                    const d = m.val();
-                    const c = d.s == me ? 'sent' : 'rec';
+                    const d = m.val(); const c = d.s == me ? 'sent' : 'rec';
                     b.innerHTML += `<div class="msg ${c}">${d.t}</div>`;
                 });
                 b.scrollTop = b.scrollHeight;
@@ -178,14 +169,10 @@
         }
 
         function sendMsg() {
-            const t = document.getElementById('m-in').value;
-            if(!t || !other) return;
+            const t = document.getElementById('m-in').value; if(!t) return;
             const id = me < other ? me+"_"+other : other+"_"+me;
-            db.ref('chats/'+id).push({s:me, t:t});
-            document.getElementById('m-in').value = "";
+            db.ref('chats/'+id).push({s:me, t:t}); document.getElementById('m-in').value = "";
         }
-
-        function closeChat() { document.getElementById('chat-win').classList.add('hidden'); other = ""; }
 
         function postStory() {
             const t = document.getElementById('story-txt').value; if(!t) return;
@@ -199,6 +186,33 @@
                 s.forEach(st => {
                     const d = st.val(); const key = st.key;
                     db.ref('users/'+d.u).once('value', u => {
-                        const ud = u.val();
-                        let lks = d.likes || 0;
-                        f.innerHTML = `<div class="story
+                        const ud = u.val(); let lks = d.likes || 0;
+                        let comments = "";
+                        if(d.comments) Object.values(d.comments).forEach(c => { comments += `<div style="font-size:11px;"><b>${c.u}:</b> ${c.t}</div>`; });
+                        
+                        f.innerHTML = `<div class="story-card">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <div style="display:flex; align-items:center;"><img src="${ud.img}" class="avatar" style="width:30px; height:30px;"><b>${ud.name}</b></div>
+                                ${d.u==me ? `<div><button onclick="editStory('${key}','${d.t}')" style="width:auto; font-size:10px; background:orange; color:white; border:none; padding:2px 5px; border-radius:4px;">Edit</button> <button onclick="db.ref('stories/${key}').remove()" style="width:auto; font-size:10px; background:red; color:white; border:none; padding:2px 5px; border-radius:4px;">Delete</button></div>` : ''}
+                            </div>
+                            <p style="margin:10px 0;">${d.t}</p>
+                            <div style="display:flex; gap:10px;">
+                                <button style="width:auto; font-size:11px; background:#f0f0f0; border:none; padding:4px 8px; border-radius:5px;" onclick="db.ref('stories/${key}').update({likes: ${lks+1}})">❤️ ${lks}</button>
+                                <button style="width:auto; font-size:11px; background:#f0f0f0; border:none; padding:4px 8px; border-radius:5px;" onclick="addComment('${key}')">💬 Comment</button>
+                            </div>
+                            <div style="margin-top:8px; background:#f9f9f9; padding:5px; border-radius:5px;">${comments || 'No comments'}</div>
+                        </div>` + f.innerHTML;
+                    });
+                });
+            });
+        }
+
+        function editStory(k, t) { const n = prompt("Edit Story:", t); if(n) db.ref('stories/'+k).update({t:n}); }
+        function addComment(k) { const c = prompt("Comment:"); if(c) db.ref('stories/'+k+'/comments').push({u: me, t: c}); }
+        function updateProfile() { db.ref('users/'+me).update({name: document.getElementById('edit-name').value, img: document.getElementById('edit-img').value}); alert("Updated!"); }
+        function showPage(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
+        function closeChat() { document.getElementById('chat-win').classList.add('hidden'); }
+        function logout() { localStorage.clear(); location.reload(); }
+    </script>
+</body>
+</html>

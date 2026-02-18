@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORY Messenger PRO</title>
+    <title>STORY Pro Messenger</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
@@ -16,18 +16,14 @@
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; cursor: pointer; color: #666; }
         .nav-item.active { color: var(--main); font-weight: bold; }
         .page { height: calc(100vh - 130px); overflow-y: auto; padding-bottom: 20px; }
-        .card { background: white; padding: 15px; margin: 10px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .contact-item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee; background: white; cursor: pointer; }
         .avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #ddd; margin-right: 15px; }
-        .story-card { background: white; padding: 15px; margin: 10px; border-radius: 15px; position: relative; }
-        .action-bar { display: flex; gap: 15px; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; }
-        .action-btn { background: none; border: none; color: #555; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 5px; width: auto; }
-        .comment-sec { background: #f8f9fa; border-radius: 10px; padding: 8px; margin-top: 10px; font-size: 12px; }
+        .card { background: white; padding: 15px; margin: 10px; border-radius: 15px; }
         .msg-box { height: calc(100vh - 130px); overflow-y: auto; padding: 15px; display: flex; flex-direction: column; background: #e5ddd5; }
-        .msg { padding: 10px; border-radius: 15px; margin-bottom: 8px; max-width: 75%; font-size: 14px; }
+        .msg { padding: 10px; border-radius: 15px; margin-bottom: 8px; max-width: 75%; font-size: 14px; word-wrap: break-word; }
         .sent { background: #dcf8c6; align-self: flex-end; }
         .rec { background: white; align-self: flex-start; }
-        .edit-del-btns { display: flex; gap: 10px; margin-top: 5px; }
-        .small-btn { font-size: 10px; padding: 4px 8px; width: auto; border: none; border-radius: 5px; cursor: pointer; }
+        .story-card { background: white; padding: 15px; margin: 10px; border-radius: 15px; }
     </style>
 </head>
 <body>
@@ -38,7 +34,7 @@
             <input type="number" id="l-phone" placeholder="Phone Number">
             <input type="password" id="l-pass" placeholder="Password">
             <button onclick="login()" style="background:var(--main); color:white;">Log In</button>
-            <p onclick="toggleAuth(true)" style="color:blue; cursor:pointer;">අලුත් ගිණුමක් සාදන්න</p>
+            <p onclick="toggleAuth(true)" style="color:blue; cursor:pointer;">ගිණුමක් සාදන්න</p>
         </div>
         <div id="sign-div" class="hidden">
             <input type="text" id="s-name" placeholder="Name">
@@ -50,7 +46,7 @@
     </div>
 
     <div id="main-app" class="hidden">
-        <header><span id="header-title">STORY</span> <span onclick="logout()" style="font-size: 12px; font-weight: normal; cursor:pointer;">Logout</span></header>
+        <header><span id="header-title">STORY</span> <span onclick="logout()" style="font-size: 12px; cursor:pointer;">Logout</span></header>
         
         <div id="page-chats" class="page">
             <div id="contact-list"></div>
@@ -66,11 +62,10 @@
 
         <div id="page-profile" class="page hidden">
             <div class="card" style="text-align:center;">
-                <img id="my-img" src="" class="avatar" style="width:100px; height:100px; border:2px solid var(--main); margin-bottom:10px;">
-                <input type="text" id="edit-name" placeholder="ඔබේ නම">
-                <input type="text" id="edit-img" placeholder="Profile Photo Link (URL)">
+                <img id="my-img" src="" class="avatar" style="width:100px; height:100px; border:2px solid var(--main);">
+                <input type="text" id="edit-name" placeholder="Name">
+                <input type="text" id="edit-img" placeholder="Photo URL">
                 <button onclick="updateProfile()" style="background:var(--main); color:white;">Update Profile</button>
-                <p style="font-size: 11px; color: gray; margin-top: 10px;">Photo එකක් දාන්න Google එකෙන් Image ලින්ක් එකක් පේස්ට් කරන්න.</p>
             </div>
         </div>
 
@@ -82,11 +77,14 @@
     </div>
 
     <div id="chat-win" class="hidden" style="position:fixed; top:0; width:100%; height:100vh; background:white; z-index:200;">
-        <header><button onclick="closeChat()" style="background:none; border:none; color:white; font-size:20px;">⬅</button> <span id="chat-target"></span> <span></span></header>
+        <header style="padding:10px;">
+            <button onclick="closeChat()" style="background:none; border:none; color:white; font-size:20px; width:auto;">⬅</button> 
+            <span id="chat-target" style="margin-left:10px;">Chat</span>
+        </header>
         <div id="msg-container" class="msg-box"></div>
-        <div style="padding:10px; display:flex; gap:5px; background:white;">
+        <div style="padding:10px; display:flex; gap:5px; background:white; border-top:1px solid #eee;">
             <input type="text" id="m-in" placeholder="මැසේජ් එකක්..." style="margin:0">
-            <button onclick="sendMsg()" style="width:50px; background:var(--main); color:white; border:none;">➔</button>
+            <button onclick="sendMsg()" style="width:60px; background:var(--main); color:white; border:none; margin:0;">➔</button>
         </div>
     </div>
 
@@ -103,14 +101,20 @@
 
         if(me) startApp();
 
-        function toggleAuth(s) { document.getElementById('login-div').classList.toggle('hidden', s); document.getElementById('sign-div').classList.toggle('hidden', !s); }
+        function toggleAuth(s) {
+            document.getElementById('login-div').classList.toggle('hidden', s);
+            document.getElementById('sign-div').classList.toggle('hidden', !s);
+        }
 
         function login() {
             const p = document.getElementById('l-phone').value;
             const pw = document.getElementById('l-pass').value;
             db.ref('users/'+p).once('value', s => {
-                if(s.exists() && s.val().pass == pw) { localStorage.setItem("u_phone", p); me = p; startApp(); }
-                else alert("විස්තර වැරදියි!");
+                if(s.exists() && s.val().pass == pw) {
+                    localStorage.setItem("u_phone", p);
+                    me = p;
+                    startApp();
+                } else { alert("විස්තර වැරදියි!"); }
             });
         }
 
@@ -119,7 +123,8 @@
             const p = document.getElementById('s-phone').value;
             const pw = document.getElementById('s-pass').value;
             if(n && p && pw) {
-                db.ref('users/'+p).set({name:n, pass:pw, phone:p, img:"https://cdn-icons-png.flaticon.com/512/149/149071.png"}).then(() => { alert("සාර්ථකයි!"); toggleAuth(false); });
+                db.ref('users/'+p).set({name:n, pass:pw, phone:p, img:"https://cdn-icons-png.flaticon.com/512/149/149071.png"})
+                .then(() => { alert("සාර්ථකයි!"); toggleAuth(false); });
             }
         }
 
@@ -128,51 +133,63 @@
             document.getElementById('main-app').classList.remove('hidden');
             db.ref('users/'+me).on('value', s => {
                 const d = s.val();
-                if(d){
+                if(d) {
                     document.getElementById('header-title').innerText = d.name;
                     document.getElementById('my-img').src = d.img;
                     document.getElementById('edit-name').value = d.name;
                     document.getElementById('edit-img').value = d.img;
                 }
             });
-            loadContacts(); loadStories();
-        }
-
-        function updateProfile() {
-            const n = document.getElementById('edit-name').value;
-            const i = document.getElementById('edit-img').value;
-            db.ref('users/'+me).update({name: n, img: i}).then(() => alert("පැතිකඩ යාවත්කාලීන වුණා!"));
+            loadContacts();
+            loadStories();
         }
 
         function loadContacts() {
             db.ref('users').on('value', s => {
-                const list = document.getElementById('contact-list'); list.innerHTML = "";
+                const list = document.getElementById('contact-list');
+                list.innerHTML = "";
                 s.forEach(u => {
-                    if(u.key !== me) list.innerHTML += `<div class="contact-item" onclick="openChat('${u.key}', '${u.val().name}')"><img src="${u.val().img}" class="avatar"><b>${u.val().name}</b></div>`;
+                    if(u.key !== me) {
+                        list.innerHTML += `<div class="contact-item" onclick="openChat('${u.key}', '${u.val().name}')">
+                            <img src="${u.val().img}" class="avatar">
+                            <b>${u.val().name}</b>
+                        </div>`;
+                    }
                 });
             });
         }
 
         function openChat(u, n) {
-            other = u; document.getElementById('chat-target').innerText = n;
+            other = u;
+            document.getElementById('chat-target').innerText = n;
             document.getElementById('chat-win').classList.remove('hidden');
             const id = me < other ? me+"_"+other : other+"_"+me;
+            db.ref('chats/'+id).off(); // පරණ ඒක නවත්තන්න
             db.ref('chats/'+id).on('value', s => {
-                const b = document.getElementById('msg-container'); b.innerHTML = "";
-                s.forEach(m => { const d = m.val(); const c = d.s == me ? 'sent' : 'rec'; b.innerHTML += `<div class="msg ${c}">${d.t}</div>`; });
+                const b = document.getElementById('msg-container');
+                b.innerHTML = "";
+                s.forEach(m => {
+                    const d = m.val();
+                    const c = d.s == me ? 'sent' : 'rec';
+                    b.innerHTML += `<div class="msg ${c}">${d.t}</div>`;
+                });
                 b.scrollTop = b.scrollHeight;
             });
         }
 
         function sendMsg() {
-            const t = document.getElementById('m-in').value; if(!t) return;
+            const t = document.getElementById('m-in').value;
+            if(!t || !other) return;
             const id = me < other ? me+"_"+other : other+"_"+me;
-            db.ref('chats/'+id).push({s:me, t:t}); document.getElementById('m-in').value = "";
+            db.ref('chats/'+id).push({s:me, t:t});
+            document.getElementById('m-in').value = "";
         }
+
+        function closeChat() { document.getElementById('chat-win').classList.add('hidden'); other = ""; }
 
         function postStory() {
             const t = document.getElementById('story-txt').value; if(!t) return;
-            db.ref('stories').push({u:me, t:t, likes: 0, time: Date.now()});
+            db.ref('stories').push({u:me, t:t, likes: 0});
             document.getElementById('story-txt').value = "";
         }
 
@@ -182,59 +199,6 @@
                 s.forEach(st => {
                     const d = st.val(); const key = st.key;
                     db.ref('users/'+d.u).once('value', u => {
-                        const userData = u.val();
-                        let likes = d.likes || 0;
-                        let commentHTML = "";
-                        if(d.comments) Object.values(d.comments).forEach(c => { commentHTML += `<div><b>${c.u}:</b> ${c.t}</div>`; });
-                        
-                        let myActions = (d.u === me) ? `
-                            <div class="edit-del-btns">
-                                <button class="small-btn" style="background:#ffa502; color:white;" onclick="editStory('${key}', '${d.t}')">Edit</button>
-                                <button class="small-btn" style="background:#ff4757; color:white;" onclick="deleteStory('${key}')">Delete</button>
-                            </div>` : "";
-
-                        f.innerHTML = `<div class="story-card">
-                            <div style="display:flex; align-items:center; justify-content:space-between;">
-                                <div style="display:flex; align-items:center;">
-                                    <img src="${userData.img}" style="width:35px; height:35px; border-radius:50%; margin-right:10px;">
-                                    <b>${userData.name}</b>
-                                </div>
-                                ${myActions}
-                            </div>
-                            <p style="margin:10px 0 10px 45px;">${d.t}</p>
-                            <div class="action-bar">
-                                <button class="action-btn" onclick="likeStory('${key}', ${likes})">❤️ ${likes} Likes</button>
-                                <button class="action-btn" onclick="addComment('${key}')">💬 Comment</button>
-                            </div>
-                            <div class="comment-sec" style="${commentHTML ? '' : 'display:none'}">${commentHTML}</div>
-                        </div>` + f.innerHTML;
-                    });
-                });
-            });
-        }
-
-        function likeStory(k, c) { db.ref('stories/'+k).update({likes: c + 1}); }
-        function addComment(k) { 
-            db.ref('users/'+me).once('value', s => {
-                const name = s.val().name;
-                const c = prompt("ඔබේ අදහස ලියන්න:"); 
-                if(c) db.ref('stories/'+k+'/comments').push({u: name, t: c}); 
-            });
-        }
-        function deleteStory(k) { if(confirm("මේ Story එක මකන්න ඕනෙද?")) db.ref('stories/'+k).remove(); }
-        function editStory(k, old) { 
-            const n = prompt("Story එක වෙනස් කරන්න:", old); 
-            if(n && n !== old) db.ref('stories/'+k).update({t: n}); 
-        }
-
-        function showPage(id, el) {
-            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            el.classList.add('active');
-        }
-        function closeChat() { document.getElementById('chat-win').classList.add('hidden'); }
-        function logout() { localStorage.clear(); location.reload(); }
-    </script>
-</body>
-</html>
+                        const ud = u.val();
+                        let lks = d.likes || 0;
+                        f.innerHTML = `<div class="story

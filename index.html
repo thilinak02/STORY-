@@ -6,25 +6,30 @@
     <title>STORY Messenger PRO</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
     <style>
         :root { --viber: #7360f2; --bg: #f0f2f5; }
         body { font-family: sans-serif; margin: 0; background: var(--bg); overflow: hidden; }
         .hidden { display: none !important; }
-        input, button, select { border-radius: 20px; border: 1px solid #ddd; padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; }
+        input, button, select { border-radius: 20px; border: 1px solid #ddd; padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; }
         header { background: var(--viber); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
         .page { height: calc(100vh - 125px); overflow-y: auto; padding-bottom: 70px; }
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #eee; height: 65px; }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; color: #666; }
         .nav-item.active { color: var(--viber); font-weight: bold; }
-        .contact-card { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee; background: white; cursor: pointer; }
-        .msg-box { height: calc(100vh - 180px); overflow-y: auto; padding: 15px; display: flex; flex-direction: column; background: #e5ddd5; }
-        .msg { padding: 8px 12px; border-radius: 12px; margin-bottom: 8px; max-width: 75%; font-size: 14px; position: relative; }
-        .sent { background: #dcf8c6; align-self: flex-end; }
-        .rec { background: white; align-self: flex-start; }
-        .story-card { background: white; padding: 15px; margin: 10px; border-radius: 15px; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        /* Stories Styles */
+        .story-card { background: white; padding: 15px; margin: 10px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .story-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; color: #555; }
+        .story-content { font-size: 16px; line-height: 1.4; white-space: pre-wrap; }
+        .story-actions { border-top: 1px solid #eee; margin-top: 10px; padding-top: 8px; display: flex; gap: 15px; }
+        .action-btn { cursor: pointer; font-size: 14px; color: #666; font-weight: bold; }
+        .action-btn.liked { color: #e74c3c; }
+        
+        .comment-sec { background: #f9f9f9; padding: 8px; border-radius: 8px; margin-top: 8px; font-size: 13px; }
+        .comment-item { margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 2px; }
+
         #chat-win { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100; display: flex; flex-direction: column; }
-        .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:200; padding:20px; box-sizing:border-box; color:white; overflow-y:auto; }
+        .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:200; padding:20px; box-sizing:border-box; color:white; overflow-y:auto; }
     </style>
 </head>
 <body>
@@ -36,8 +41,8 @@
         <input id="auth-phone" type="tel" placeholder="Phone Number (07xxxxxxxx)">
         <input id="auth-pass" type="password" placeholder="Password">
         <div id="username-div" class="hidden"><input id="auth-user" placeholder="Choose a Username"></div>
-        <button id="auth-btn" onclick="handleAuth()" style="background: var(--viber); color:white;">Login</button>
-        <p id="toggle-text" onclick="toggleAuthMode()" style="text-align:center; color: var(--viber); cursor:pointer;">අලුත් ගිණුමක් සාදන්න (Sign Up)</p>
+        <button onclick="handleAuth()" style="background: var(--viber); color:white;">Continue</button>
+        <p id="toggle-text" onclick="toggleAuthMode()" style="text-align:center; color: var(--viber); cursor:pointer;">අලුත් ගිණුමක් සාදන්න</p>
     </div>
 </div>
 
@@ -48,38 +53,32 @@
     </header>
 
     <div id="page-chats" class="page">
-        <div style="padding: 10px; background: white; border-bottom: 1px solid #eee; display: flex;">
-            <input id="add-phone" placeholder="අංකය ඇතුළත් කරන්න" style="margin:0; flex:1;">
-            <button onclick="addContact()" style="width:auto; margin:0 0 0 5px; background:var(--viber); color:white; border:none; padding:10px;">Add</button>
-        </div>
+        <div style="padding: 10px; display: flex;"><input id="add-phone" placeholder="අංකය ඇතුළත් කරන්න" style="flex:1;"><button onclick="addContact()" style="width:auto; margin-left:5px; background:var(--viber); color:white;">Add</button></div>
         <div id="contacts-list"></div>
     </div>
 
     <div id="page-stories" class="page hidden">
-        <div style="padding: 15px; background: white;"><button onclick="openStoryModal()" style="background: var(--viber); color:white;">+ Add/Manage Stories</button></div>
+        <div style="padding: 15px;"><button onclick="openStoryModal()" style="background: var(--viber); color:white;">+ මගේ කතාවක් පළ කරන්න</button></div>
         <div id="story-feed"></div>
     </div>
 
     <div id="story-modal" class="modal hidden">
         <span onclick="closeStoryModal()" style="float:right; font-size:30px; cursor:pointer;">×</span>
-        <h3>Manage Stories</h3>
-        <input id="story-input" placeholder="ඔයාගේ කතාව..." style="color:black;">
-        <select id="story-privacy" style="color:black;">
+        <h3 id="modal-title">New Story</h3>
+        <p style="font-size: 11px; color: #ccc;">*text* ලෙස ලියූ විට <b>Bold</b> වේ.</p>
+        <textarea id="story-input" placeholder="ඔයාගේ කතාව..." style="width:100%; height:100px; border-radius:10px; padding:10px;"></textarea>
+        <input type="hidden" id="edit-key">
+        <select id="story-privacy">
             <option value="public">Public (හැමෝටම)</option>
             <option value="friends">Friends (අඳුනන අයට)</option>
-            <option value="me">Only Me (මට විතරයි)</option>
         </select>
-        <button onclick="postStory()" style="background:var(--viber); color:white;">Post Now</button>
-        <hr><h4>මගේ පෝස්ට්:</h4>
-        <div id="my-stories-list"></div>
+        <button id="post-btn" onclick="postStory()" style="background:var(--viber); color:white;">Post Story</button>
     </div>
 
     <div id="chat-win" class="hidden">
         <header><span onclick="closeChat()">⬅ Back</span><span id="chat-target">User</span><span></span></header>
-        <div id="msg-container" class="msg-box"></div>
-        <div style="padding:10px; display:flex; background:white; border-top:1px solid #ddd;">
-            <input id="m-in" placeholder="Type message..." style="margin:0;"><button onclick="sendMsg()" style="width:60px; margin:0 0 0 5px; background:var(--viber); color:white; border:none;">➔</button>
-        </div>
+        <div id="msg-container" style="flex:1; overflow-y:auto; padding:15px; background:#e5ddd5;"></div>
+        <div style="padding:10px; display:flex; background:white;"><input id="m-in" placeholder="Type..." style="margin:0;"><button onclick="sendMsg()" style="width:60px; background:var(--viber); color:white;">➔</button></div>
     </div>
 
     <div class="nav-bar">
@@ -89,6 +88,7 @@
 </div>
 
 <script>
+    // Config (ඔබේ Firebase තොරතුරු එලෙසම තබා ගන්න)
     const firebaseConfig = { 
         apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0", 
         databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com", 
@@ -107,18 +107,14 @@
         isSignupMode = !isSignupMode;
         document.getElementById('auth-title').innerText = isSignupMode ? "Sign Up" : "Login";
         document.getElementById('username-div').classList.toggle('hidden', !isSignupMode);
-        document.getElementById('toggle-text').innerText = isSignupMode ? "Login වෙන්න" : "අලුත් ගිණුමක් සාදන්න";
     }
 
     function handleAuth() {
         const phone = document.getElementById('auth-phone').value.trim();
         const pass = document.getElementById('auth-pass').value;
         const user = document.getElementById('auth-user').value.trim();
-        if(!phone || !pass) return alert("Phone and Password required!");
-
         if(isSignupMode) {
-            if(!user) return alert("Username required!");
-            db.ref('users/'+phone).set({pass: pass, name: user}).then(() => { alert("සාර්ථකයි! දැන් Login වෙන්න."); toggleAuthMode(); });
+            db.ref('users/'+phone).set({pass, name: user}).then(() => { alert("Success!"); toggleAuthMode(); });
         } else {
             db.ref('users/'+phone).once('value', s => {
                 if(s.exists() && s.val().pass == pass) {
@@ -137,15 +133,107 @@
         loadContacts(); loadAllStories();
     }
 
+    // Helper: Bold text converting *text* -> <b>text</b>
+    function formatText(txt) {
+        return txt.replace(/\*(.*?)\*/g, "<b>$1</b>");
+    }
+
+    function postStory() {
+        const txt = document.getElementById('story-input').value;
+        const priv = document.getElementById('story-privacy').value;
+        const key = document.getElementById('edit-key').value;
+        if(!txt) return;
+
+        const data = { phone: myPhone, user: myName, text: txt, privacy: priv, time: new Date().toLocaleString() };
+        
+        if(key) {
+            db.ref('stories/'+key).update(data);
+        } else {
+            db.ref('stories').push(data);
+        }
+        closeStoryModal();
+    }
+
+    function loadAllStories() {
+        db.ref('stories').on('value', s => {
+            const feed = document.getElementById('story-feed');
+            feed.innerHTML = "";
+            s.forEach(st => {
+                const d = st.val();
+                const key = st.key;
+                const likes = d.likes ? Object.keys(d.likes).length : 0;
+                const isLiked = d.likes && d.likes[myPhone] ? 'liked' : '';
+                
+                let html = `
+                <div class="story-card">
+                    <div class="story-header">
+                        <b>${d.user}</b> <span>${d.time}</span>
+                    </div>
+                    <div class="story-content">${formatText(d.text)}</div>
+                    
+                    <div class="story-actions">
+                        <span class="action-btn ${isLiked}" onclick="likeStory('${key}')">❤️ ${likes} Like</span>
+                        <span class="action-btn" onclick="commentPrompt('${key}')">💬 Comment</span>
+                        ${d.phone === myPhone ? `
+                            <span class="action-btn" style="color:blue" onclick="editStory('${key}', '${escape(d.text)}')">Edit</span>
+                            <span class="action-btn" style="color:red" onclick="deleteStory('${key}')">Delete</span>
+                        ` : ''}
+                    </div>
+                    <div class="comment-sec" id="comm-${key}"></div>
+                </div>`;
+                feed.insertAdjacentHTML('afterbegin', html);
+                loadComments(key);
+            });
+        });
+    }
+
+    function likeStory(key) {
+        const ref = db.ref(`stories/${key}/likes/${myPhone}`);
+        ref.once('value', s => {
+            if(s.exists()) ref.remove(); else ref.set(true);
+        });
+    }
+
+    function commentPrompt(key) {
+        const msg = prompt("ඔබේ අදහස ලියන්න:");
+        if(msg) db.ref(`stories/${key}/comments`).push({user: myName, text: msg});
+    }
+
+    function loadComments(key) {
+        db.ref(`stories/${key}/comments`).on('value', s => {
+            const div = document.getElementById('comm-'+key);
+            div.innerHTML = "";
+            s.forEach(c => {
+                div.innerHTML += `<div class="comment-item"><b>${c.val().user}:</b> ${c.val().text}</div>`;
+            });
+        });
+    }
+
+    function editStory(key, oldTxt) {
+        document.getElementById('edit-key').value = key;
+        document.getElementById('story-input').value = unescape(oldTxt);
+        document.getElementById('modal-title').innerText = "Edit Story";
+        openStoryModal();
+    }
+
+    function deleteStory(key) { if(confirm("මෙය මකා දැමීමට අවශ්‍යද?")) db.ref('stories/'+key).remove(); }
+
+    function openStoryModal() { 
+        document.getElementById('story-modal').classList.remove('hidden'); 
+    }
+    
+    function closeStoryModal() { 
+        document.getElementById('story-modal').classList.add('hidden'); 
+        document.getElementById('edit-key').value = "";
+        document.getElementById('story-input').value = "";
+    }
+
+    // --- පරණ Chat functions එලෙසම ---
     function addContact() {
         const phone = document.getElementById('add-phone').value.trim();
-        if(!phone || phone === myPhone) return;
         db.ref('users/'+phone).once('value', s => {
-            if(s.exists()) {
-                db.ref('contacts/'+myPhone+'/'+phone).set({name: s.val().name, phone: phone}).then(() => {
-                    alert("එකතු කළා!"); document.getElementById('add-phone').value = "";
-                });
-            } else alert("STORY ගිණුමක් නැත!");
+            if(s.exists()) db.ref('contacts/'+myPhone+'/'+phone).set({name: s.val().name, phone: phone});
+            else alert("නැත!");
         });
     }
 
@@ -154,41 +242,10 @@
             const list = document.getElementById('contacts-list');
             list.innerHTML = "";
             s.forEach(c => {
-                const u = c.val();
-                list.innerHTML += `<div class="contact-card" onclick="openChat('${u.phone}', '${u.name}')"><b>👤 ${u.name}</b></div>`;
+                list.innerHTML += `<div style="padding:15px; background:white; border-bottom:1px solid #eee;" onclick="openChat('${c.val().phone}', '${c.val().name}')">👤 ${c.val().name}</div>`;
             });
         });
     }
-
-    function postStory() {
-        const txt = document.getElementById('story-input').value;
-        const priv = document.getElementById('story-privacy').value;
-        if(!txt) return;
-        db.ref('stories').push({phone: myPhone, user: myName, text: txt, privacy: priv, time: new Date().toLocaleString()});
-        document.getElementById('story-input').value = "";
-        alert("පළ කළා!");
-    }
-
-    function loadAllStories() {
-        db.ref('contacts/'+myPhone).on('value', snapshot => {
-            let friends = []; snapshot.forEach(f => friends.push(f.key));
-            db.ref('stories').on('value', s => {
-                const feed = document.getElementById('story-feed');
-                const manage = document.getElementById('my-stories-list');
-                feed.innerHTML = ""; manage.innerHTML = "";
-                s.forEach(st => {
-                    const d = st.val();
-                    let show = (d.phone === myPhone || d.privacy === "public" || (d.privacy === "friends" && friends.includes(d.phone)));
-                    if(show) feed.innerHTML += `<div class="story-card"><b>${d.user}</b> <small style="float:right;">${d.time}</small><p>${d.text}</p></div>`;
-                    if(d.phone === myPhone) manage.innerHTML += `<div style="background:#444; padding:10px; margin-top:5px;">${d.text} <button onclick="deleteStory('${st.key}')" style="width:auto; float:right; background:red;">Del</button></div>`;
-                });
-            });
-        });
-    }
-
-    function deleteStory(key) { if(confirm("මකන්නද?")) db.ref('stories/'+key).remove(); }
-    function openStoryModal() { document.getElementById('story-modal').classList.remove('hidden'); }
-    function closeStoryModal() { document.getElementById('story-modal').classList.add('hidden'); }
 
     let chatID = "";
     function openChat(phone, name) {
@@ -197,8 +254,11 @@
         chatID = myPhone < phone ? myPhone+"_"+phone : phone+"_"+myPhone;
         db.ref('chats/'+chatID).on('value', s => {
             const b = document.getElementById('msg-container'); b.innerHTML = "";
-            s.forEach(m => { b.innerHTML += `<div class="msg ${m.val().s == myPhone ? 'sent' : 'rec'}">${m.val().t}</div>`; });
-            b.scrollTop = b.scrollHeight;
+            s.forEach(m => {
+                const align = m.val().s == myPhone ? 'text-align:right' : 'text-align:left';
+                const bg = m.val().s == myPhone ? '#dcf8c6' : 'white';
+                b.innerHTML += `<div style="${align}; margin-bottom:5px;"><span style="background:${bg}; padding:8px; border-radius:10px; display:inline-block;">${m.val().t}</span></div>`;
+            });
         });
     }
 

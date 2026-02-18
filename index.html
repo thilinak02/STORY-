@@ -3,65 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORY Messenger PRO (Verified)</title>
+    <title>STORY Messenger PRO + Photos</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
     <style>
         :root { --viber: #7360f2; --bg: #f0f2f5; }
         body { font-family: sans-serif; margin: 0; background: var(--bg); overflow: hidden; }
         .hidden { display: none !important; }
-        input, button, select, textarea { border-radius: 20px; border: 1px solid #ddd; padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; }
+        input, button, select, textarea { border-radius: 20px; border: 1px solid #ddd; padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; }
         header { background: var(--viber); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
         .page { height: calc(100vh - 125px); overflow-y: auto; padding-bottom: 70px; }
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #eee; height: 65px; }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; color: #666; }
         .nav-item.active { color: var(--viber); font-weight: bold; }
+        
+        /* Profiles & Stories */
+        .profile-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 10px; background: #ddd; }
+        .story-img { width: 100%; border-radius: 10px; margin-top: 10px; max-height: 300px; object-fit: cover; }
         .card { background: white; padding: 15px; margin: 10px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
         #chat-win { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100; display: flex; flex-direction: column; }
+        .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:200; padding:20px; box-sizing:border-box; color:white; overflow-y:auto; }
     </style>
 </head>
 <body>
 
-<div id="auth-page">
-    <header>STORY Messenger - Verify</header>
-    <div style="padding: 20px;">
-        <h2>දුරකථන අංකය තහවුරු කරන්න</h2>
-        <p style="font-size: 13px; color: #666;">අංකය ඇතුළත් කරන විට රටේ කේතය සහිතව ඇතුළත් කරන්න (උදා: +94771234567)</p>
-        
-        <div id="phone-input-sec">
-            <input id="auth-phone" type="tel" placeholder="+94 7x xxx xxxx">
-            <div id="recaptcha-container"></div>
-            <button onclick="sendOTP()" style="background: var(--viber); color:white;">SMS කේතය එවන්න</button>
-        </div>
+<audio id="notif-alert" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
 
-        <div id="otp-input-sec" class="hidden">
-            <input id="auth-otp" type="number" placeholder="SMS කේතය (OTP) ඇතුළත් කරන්න">
-            <input id="auth-user" placeholder="ඔබේ නම (පළමු වරට නම්)">
-            <button onclick="verifyOTP()" style="background: #28a745; color:white;">තහවුරු කර ඇතුළු වන්න</button>
+<div id="auth-page">
+    <header>STORY Messenger</header>
+    <div style="padding: 20px;">
+        <h2 id="auth-title">Login</h2>
+        <input id="auth-phone" type="tel" placeholder="Phone Number">
+        <input id="auth-pass" type="password" placeholder="Password">
+        <div id="username-div" class="hidden">
+            <input id="auth-user" placeholder="Username">
+            <p style="font-size:12px;">Profile පින්තූරයක් තෝරන්න:</p>
+            <input type="file" id="profile-upload" accept="image/*">
         </div>
+        <button onclick="handleAuth()" style="background: var(--viber); color:white;">Continue</button>
+        <p id="toggle-text" onclick="toggleAuthMode()" style="text-align:center; color: var(--viber); cursor:pointer;">අලුත් ගිණුමක් සාදන්න</p>
     </div>
 </div>
 
 <div id="main-app" class="hidden">
     <header>
-        <span id="display-name">STORY</span>
-        <button onclick="logout()" style="width:auto; padding:5px 10px; font-size:11px; background:rgba(255,255,255,0.2); border:none; color:white;">Logout</button>
+        <div style="display:flex; align-items:center;">
+            <img id="my-pfp" class="profile-img" src="">
+            <span id="display-name">STORY</span>
+        </div>
+        <button onclick="logout()" style="width:auto; padding:5px; font-size:11px; background:rgba(255,255,255,0.2); border:none; color:white;">Logout</button>
     </header>
 
     <div id="page-chats" class="page">
         <div style="padding: 10px; display: flex;">
-            <input id="search-phone" placeholder="අංකය (+947...)">
+            <input id="search-phone" placeholder="මිතුරෙකු සොයන්න...">
             <button onclick="sendFriendRequest()" style="width:auto; margin-left:5px; background:var(--viber); color:white;">Invite</button>
         </div>
         <div id="requests-list"></div>
-        <hr>
         <div id="contacts-list"></div>
     </div>
 
     <div id="page-stories" class="page hidden">
         <div style="padding: 15px;"><button onclick="openStoryModal()" style="background: var(--viber); color:white;">+ පෝස්ට් එකක් දාන්න</button></div>
         <div id="story-feed"></div>
+    </div>
+
+    <div id="story-modal" class="modal hidden">
+        <span onclick="closeStoryModal()" style="float:right; font-size:30px; cursor:pointer;">×</span>
+        <h3>New Story</h3>
+        <textarea id="story-input" placeholder="ඔයාගේ කතාව..."></textarea>
+        <p style="font-size:12px;">පින්තූරයක් එක් කරන්න (Optional):</p>
+        <input type="file" id="story-upload" accept="image/*">
+        <button id="post-btn" onclick="postStory()" style="background:var(--viber); color:white;">Post Now</button>
     </div>
 
     <div id="chat-win" class="hidden">
@@ -81,74 +96,108 @@
         apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0", 
         databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com", 
         projectId: "story-ceca0",
-        authDomain: "story-ceca0.firebaseapp.com" // OTP සඳහා මෙය අත්‍යවශ්‍යයි
+        storageBucket: "story-ceca0.appspot.com"
     };
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
     const db = firebase.database();
+    const storage = firebase.storage();
 
-    let confirmationResult;
     let myPhone = localStorage.getItem("phone") || "";
     let myName = localStorage.getItem("username") || "";
+    let myPic = localStorage.getItem("pfp") || "";
+    let isSignupMode = false;
 
     if(myPhone && myName) startApp();
 
-    // --- OTP Logic ---
-    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { 'size': 'invisible' });
-
-    function sendOTP() {
-        const phone = document.getElementById('auth-phone').value.trim();
-        if(!phone.startsWith('+')) return alert("රටේ කේතය (+94) සහිතව ඇතුළත් කරන්න!");
-
-        auth.signInWithPhoneNumber(phone, window.recaptchaVerifier)
-            .then(res => {
-                confirmationResult = res;
-                document.getElementById('phone-input-sec').classList.add('hidden');
-                document.getElementById('otp-input-sec').classList.remove('hidden');
-                alert("ඔබේ දුරකථනයට කේතය එවනු ලැබුවා.");
-            }).catch(err => alert("Error: " + err.message));
+    function toggleAuthMode() {
+        isSignupMode = !isSignupMode;
+        document.getElementById('auth-title').innerText = isSignupMode ? "Sign Up" : "Login";
+        document.getElementById('username-div').classList.toggle('hidden', !isSignupMode);
     }
 
-    function verifyOTP() {
-        const code = document.getElementById('auth-otp').value;
-        const nameInput = document.getElementById('auth-user').value.trim();
+    async function handleAuth() {
+        const phone = document.getElementById('auth-phone').value.trim();
+        const pass = document.getElementById('auth-pass').value;
+        const user = document.getElementById('auth-user').value.trim();
+        const file = document.getElementById('profile-upload').files[0];
 
-        confirmationResult.confirm(code).then(result => {
-            const user = result.user;
-            myPhone = user.phoneNumber;
-            
-            // Database එකේ නම තිබේදැයි බලමු
-            db.ref('users/' + myPhone).once('value', s => {
-                if(s.exists()) {
-                    myName = s.val().name;
-                } else {
-                    if(!nameInput) return alert("කරුණාකර ඔබේ නම ඇතුළත් කරන්න!");
-                    myName = nameInput;
-                    db.ref('users/' + myPhone).set({ name: myName });
-                }
-                localStorage.setItem("phone", myPhone);
-                localStorage.setItem("username", myName);
-                startApp();
+        if(isSignupMode) {
+            let purl = "";
+            if(file) {
+                const sRef = storage.ref('profiles/'+phone);
+                await sRef.put(file);
+                purl = await sRef.getDownloadURL();
+            }
+            db.ref('users/'+phone).set({pass, name: user, pfp: purl}).then(() => { alert("Done! Now Login."); toggleAuthMode(); });
+        } else {
+            db.ref('users/'+phone).once('value', s => {
+                if(s.exists() && s.val().pass == pass) {
+                    myPhone = phone; myName = s.val().name; myPic = s.val().pfp || "";
+                    localStorage.setItem("phone", phone); localStorage.setItem("username", myName); localStorage.setItem("pfp", myPic);
+                    startApp();
+                } else alert("වැරදියි!");
             });
-        }).catch(err => alert("වැරදි කේතයක්!"));
+        }
     }
 
     function startApp() {
         document.getElementById('auth-page').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
         document.getElementById('display-name').innerText = myName;
+        document.getElementById('my-pfp').src = myPic || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
         loadRequests(); loadContacts(); loadAllStories();
     }
 
-    // --- Friend & Chat Logic (කලින් තිබූ ඒවා එලෙසම...) ---
+    // --- Image Story Logic ---
+    async function postStory() {
+        const btn = document.getElementById('post-btn');
+        const txt = document.getElementById('story-input').value;
+        const file = document.getElementById('story-upload').files[0];
+        if(!txt && !file) return;
+
+        btn.disabled = true; btn.innerText = "Uploading...";
+        let imgUrl = "";
+        
+        if(file) {
+            const sRef = storage.ref('stories/' + Date.now());
+            await sRef.put(file);
+            imgUrl = await sRef.getDownloadURL();
+        }
+
+        db.ref('stories').push({
+            phone: myPhone, user: myName, pfp: myPic, 
+            text: txt, img: imgUrl, time: new Date().toLocaleString()
+        });
+
+        btn.disabled = false; btn.innerText = "Post Now";
+        closeStoryModal();
+    }
+
+    function loadAllStories() {
+        db.ref('stories').on('value', s => {
+            const feed = document.getElementById('story-feed'); feed.innerHTML = "";
+            s.forEach(st => {
+                const d = st.val();
+                feed.insertAdjacentHTML('afterbegin', `
+                    <div class="card">
+                        <div style="display:flex; align-items:center; margin-bottom:10px;">
+                            <img class="profile-img" src="${d.pfp || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}">
+                            <b>${d.user}</b>
+                        </div>
+                        <div style="font-size:15px;">${d.text}</div>
+                        ${d.img ? `<img src="${d.img}" class="story-img">` : ''}
+                        <div style="font-size:11px; color:#888; margin-top:10px;">${d.time}</div>
+                    </div>
+                `);
+            });
+        });
+    }
+
+    // --- Contacts & Chat ---
     function sendFriendRequest() {
         const p = document.getElementById('search-phone').value.trim();
-        if(p === myPhone) return;
         db.ref('users/'+p).once('value', s => {
-            if(s.exists()) {
-                db.ref(`requests/${p}/${myPhone}`).set({ name: myName, from: myPhone });
-                alert("Request එක යැව්වා!");
-            } else alert("Verified STORY ගිණුමක් නැත!");
+            if(s.exists()) db.ref(`requests/${p}/${myPhone}`).set({ name: myName, from: myPhone, pfp: myPic });
         });
     }
 
@@ -157,14 +206,14 @@
             const div = document.getElementById('requests-list'); div.innerHTML = "";
             s.forEach(req => {
                 const d = req.val();
-                div.innerHTML += `<div class="card" style="background:#fff3cd">Invite: <b>${d.name}</b> <button onclick="acceptFriend('${d.from}','${d.name}')">Accept</button></div>`;
+                div.innerHTML += `<div class="card" style="background:#fff3cd">Invite: <b>${d.name}</b> <button onclick="acceptFriend('${d.from}','${d.name}','${d.pfp}')">Accept</button></div>`;
             });
         });
     }
 
-    function acceptFriend(fP, fN) {
-        db.ref(`contacts/${myPhone}/${fP}`).set({ name: fN, phone: fP });
-        db.ref(`contacts/${fP}/${myPhone}`).set({ name: myName, phone: myPhone });
+    function acceptFriend(fP, fN, fPic) {
+        db.ref(`contacts/${myPhone}/${fP}`).set({ name: fN, phone: fP, pfp: fPic });
+        db.ref(`contacts/${fP}/${myPhone}`).set({ name: myName, phone: myPhone, pfp: myPic });
         db.ref(`requests/${myPhone}/${fP}`).remove();
     }
 
@@ -172,17 +221,20 @@
         db.ref('contacts/'+myPhone).on('value', s => {
             const list = document.getElementById('contacts-list'); list.innerHTML = "";
             s.forEach(c => {
-                list.innerHTML += `<div class="card" onclick="openChat('${c.val().phone}','${c.val().name}')">👤 ${c.val().name}</div>`;
+                const d = c.val();
+                list.innerHTML += `<div class="card" style="display:flex; align-items:center;" onclick="openChat('${d.phone}','${d.name}')">
+                    <img src="${d.pfp || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="profile-img">
+                    <b>${d.name}</b>
+                </div>`;
             });
         });
     }
 
-    let currentChatID = "";
     function openChat(p, n) {
         document.getElementById('chat-target').innerText = n;
         document.getElementById('chat-win').classList.remove('hidden');
-        currentChatID = myPhone < p ? myPhone+"_"+p : p+"_"+myPhone;
-        db.ref('chats/'+currentChatID).on('value', s => {
+        const cid = myPhone < p ? myPhone+"_"+p : p+"_"+myPhone;
+        db.ref('chats/'+cid).on('value', s => {
             const b = document.getElementById('msg-container'); b.innerHTML = "";
             s.forEach(m => {
                 const isMe = m.val().s == myPhone;
@@ -190,11 +242,12 @@
             });
             b.scrollTop = b.scrollHeight;
         });
+        window.currentCID = cid;
     }
 
     function sendMsg() {
         const t = document.getElementById('m-in').value;
-        if(t) db.ref('chats/'+currentChatID).push({s: myPhone, t: t});
+        if(t) db.ref('chats/'+window.currentCID).push({s: myPhone, t: t});
         document.getElementById('m-in').value = "";
     }
 
@@ -206,7 +259,12 @@
         el.classList.add('active');
     }
     function closeChat() { document.getElementById('chat-win').classList.add('hidden'); }
-    function openStoryModal() { alert("Stories වැඩ කරයි (කලින් කේතය බලන්න)"); }
+    function openStoryModal() { document.getElementById('story-modal').classList.remove('hidden'); }
+    function closeStoryModal() { 
+        document.getElementById('story-modal').classList.add('hidden'); 
+        document.getElementById('story-input').value = "";
+        document.getElementById('story-upload').value = "";
+    }
 </script>
 </body>
 </html>

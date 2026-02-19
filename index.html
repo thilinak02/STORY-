@@ -3,267 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORY Messenger PRO + Photos</title>
+    <title>STORY - FREE IMAGES</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
     <style>
         :root { --viber: #7360f2; --bg: #f0f2f5; }
         body { font-family: sans-serif; margin: 0; background: var(--bg); overflow: hidden; }
         .hidden { display: none !important; }
-        input, button, select, textarea { border-radius: 20px; border: 1px solid #ddd; padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; }
-        header { background: var(--viber); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+        input, button, textarea { border-radius: 20px; border: 1px solid #ddd; padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; }
+        header { background: var(--viber); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
         .page { height: calc(100vh - 125px); overflow-y: auto; padding-bottom: 70px; }
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #eee; height: 65px; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; color: #666; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: #666; cursor: pointer; }
         .nav-item.active { color: var(--viber); font-weight: bold; }
-        
-        /* Profiles & Stories */
-        .profile-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 10px; background: #ddd; }
-        .story-img { width: 100%; border-radius: 10px; margin-top: 10px; max-height: 300px; object-fit: cover; }
-        .card { background: white; padding: 15px; margin: 10px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        
-        #chat-win { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100; display: flex; flex-direction: column; }
+        .card { background: white; padding: 15px; margin: 12px; border-radius: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .pfp { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; margin-right: 10px; background: #eee; }
+        .s-img { width: 100%; border-radius: 12px; margin-top: 10px; display: block; }
+        .btn-act { cursor: pointer; font-size: 14px; font-weight: bold; color: #555; margin-right: 15px; }
         .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:200; padding:20px; box-sizing:border-box; color:white; overflow-y:auto; }
     </style>
 </head>
 <body>
 
-<audio id="notif-alert" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
-
 <div id="auth-page">
     <header>STORY Messenger</header>
-    <div style="padding: 20px;">
-        <h2 id="auth-title">Login</h2>
-        <input id="auth-phone" type="tel" placeholder="Phone Number">
-        <input id="auth-pass" type="password" placeholder="Password">
-        <div id="username-div" class="hidden">
-            <input id="auth-user" placeholder="Username">
-            <p style="font-size:12px;">Profile පින්තූරයක් තෝරන්න:</p>
-            <input type="file" id="profile-upload" accept="image/*">
+    <div style="padding: 25px;">
+        <h2 id="at">Login</h2>
+        <input id="ap" type="tel" placeholder="Phone (07xxxxxxxx)">
+        <input id="as" type="password" placeholder="Password">
+        <div id="ud" class="hidden">
+            <input id="au" placeholder="Username">
+            <p style="font-size:12px;">Profile Picture එකක් තෝරන්න:</p>
+            <input type="file" id="up" accept="image/*">
         </div>
-        <button onclick="handleAuth()" style="background: var(--viber); color:white;">Continue</button>
-        <p id="toggle-text" onclick="toggleAuthMode()" style="text-align:center; color: var(--viber); cursor:pointer;">අලුත් ගිණුමක් සාදන්න</p>
+        <button onclick="authMe()" style="background:var(--viber); color:white;">Continue</button>
+        <p onclick="tgl()" style="text-align:center; color:var(--viber); cursor:pointer;">අලුත් ගිණුමක් සාදන්න</p>
     </div>
 </div>
 
 <div id="main-app" class="hidden">
     <header>
         <div style="display:flex; align-items:center;">
-            <img id="my-pfp" class="profile-img" src="">
-            <span id="display-name">STORY</span>
+            <img id="myp" class="pfp">
+            <span id="myn" style="font-weight:bold;">STORY</span>
         </div>
-        <button onclick="logout()" style="width:auto; padding:5px; font-size:11px; background:rgba(255,255,255,0.2); border:none; color:white;">Logout</button>
+        <button onclick="localStorage.clear();location.reload();" style="width:auto; padding:5px; background:none; border:none; color:white;">Logout</button>
     </header>
 
-    <div id="page-chats" class="page">
-        <div style="padding: 10px; display: flex;">
-            <input id="search-phone" placeholder="මිතුරෙකු සොයන්න...">
-            <button onclick="sendFriendRequest()" style="width:auto; margin-left:5px; background:var(--viber); color:white;">Invite</button>
+    <div id="p-chats" class="page">
+        <div style="padding:15px; display:flex;">
+            <input id="sp" placeholder="අංකය...">
+            <button onclick="inv()" style="width:auto; margin-left:5px; background:var(--viber); color:white;">Invite</button>
         </div>
-        <div id="requests-list"></div>
-        <div id="contacts-list"></div>
+        <div id="reqs"></div>
+        <div id="cons"></div>
     </div>
 
-    <div id="page-stories" class="page hidden">
-        <div style="padding: 15px;"><button onclick="openStoryModal()" style="background: var(--viber); color:white;">+ පෝස්ට් එකක් දාන්න</button></div>
-        <div id="story-feed"></div>
+    <div id="p-stories" class="page hidden">
+        <div style="padding:15px;"><button onclick="document.getElementById('sm').classList.remove('hidden')" style="background:var(--viber); color:white;">+ Post Story</button></div>
+        <div id="feed"></div>
     </div>
 
-    <div id="story-modal" class="modal hidden">
-        <span onclick="closeStoryModal()" style="float:right; font-size:30px; cursor:pointer;">×</span>
+    <div id="sm" class="modal hidden">
+        <span onclick="this.parentElement.classList.add('hidden')" style="float:right; font-size:30px; cursor:pointer;">&times;</span>
         <h3>New Story</h3>
-        <textarea id="story-input" placeholder="ඔයාගේ කතාව..."></textarea>
-        <p style="font-size:12px;">පින්තූරයක් එක් කරන්න (Optional):</p>
-        <input type="file" id="story-upload" accept="image/*">
-        <button id="post-btn" onclick="postStory()" style="background:var(--viber); color:white;">Post Now</button>
+        <textarea id="si" placeholder="ඔයාගේ අදහස..."></textarea>
+        <input type="file" id="su" accept="image/*">
+        <button id="pb" onclick="post()">Post Now</button>
     </div>
 
-    <div id="chat-win" class="hidden">
-        <header><span onclick="closeChat()">⬅ Back</span><span id="chat-target">User</span><span></span></header>
-        <div id="msg-container" style="flex:1; overflow-y:auto; padding:15px; background:#e5ddd5; display:flex; flex-direction:column;"></div>
-        <div style="padding:10px; display:flex; background:white;"><input id="m-in" placeholder="Type..." style="margin:0;"><button onclick="sendMsg()" style="width:60px; background:var(--viber); color:white;">➔</button></div>
+    <div id="cw" class="hidden" style="position:fixed; top:0; width:100%; height:100%; background:white; z-index:100; display:flex; flex-direction:column;">
+        <header><span onclick="document.getElementById('cw').classList.add('hidden')">⬅ Back</span><span id="ct">User</span><span></span></header>
+        <div id="mc" style="flex:1; overflow-y:auto; padding:15px; background:#f0f2f5; display:flex; flex-direction:column;"></div>
+        <div style="padding:10px; display:flex; background:white;"><input id="mi" placeholder="Type..."><button onclick="send()" style="width:60px; background:var(--viber); color:white;">➔</button></div>
     </div>
 
     <div class="nav-bar">
-        <div class="nav-item active" onclick="showPage('page-chats', this)">💬 Chats</div>
-        <div class="nav-item" onclick="showPage('page-stories', this)">📖 Stories</div>
+        <div class="nav-item active" onclick="pg('p-chats',this)">💬 Chats</div>
+        <div class="nav-item" onclick="pg('p-stories',this)">📖 Stories</div>
     </div>
 </div>
 
 <script>
-    const firebaseConfig = { 
-        apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0", 
-        databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com", 
-        projectId: "story-ceca0",
-        storageBucket: "story-ceca0.appspot.com"
-    };
-    firebase.initializeApp(firebaseConfig);
+    const cfg = { databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com" };
+    firebase.initializeApp(cfg);
     const db = firebase.database();
-    const storage = firebase.storage();
 
-    let myPhone = localStorage.getItem("phone") || "";
-    let myName = localStorage.getItem("username") || "";
-    let myPic = localStorage.getItem("pfp") || "";
-    let isSignupMode = false;
+    let myPh = localStorage.getItem("ph") || "", myNm = localStorage.getItem("nm") || "", myPc = localStorage.getItem("pc") || "";
+    if(myPh) start();
 
-    if(myPhone && myName) startApp();
+    function tgl() { document.getElementById('at').innerText="Sign Up"; document.getElementById('ud').classList.remove('hidden'); }
 
-    function toggleAuthMode() {
-        isSignupMode = !isSignupMode;
-        document.getElementById('auth-title').innerText = isSignupMode ? "Sign Up" : "Login";
-        document.getElementById('username-div').classList.toggle('hidden', !isSignupMode);
-    }
+    // පින්තූරය Data String එකක් බවට හරවන function එක
+    const getBase64 = (file) => new Promise((res, rej) => {
+        const reader = new FileReader(); reader.readAsDataURL(file);
+        reader.onload = () => res(reader.result); reader.onerror = e => rej(e);
+    });
 
-    async function handleAuth() {
-        const phone = document.getElementById('auth-phone').value.trim();
-        const pass = document.getElementById('auth-pass').value;
-        const user = document.getElementById('auth-user').value.trim();
-        const file = document.getElementById('profile-upload').files[0];
-
-        if(isSignupMode) {
-            let purl = "";
-            if(file) {
-                const sRef = storage.ref('profiles/'+phone);
-                await sRef.put(file);
-                purl = await sRef.getDownloadURL();
-            }
-            db.ref('users/'+phone).set({pass, name: user, pfp: purl}).then(() => { alert("Done! Now Login."); toggleAuthMode(); });
-        } else {
-            db.ref('users/'+phone).once('value', s => {
-                if(s.exists() && s.val().pass == pass) {
-                    myPhone = phone; myName = s.val().name; myPic = s.val().pfp || "";
-                    localStorage.setItem("phone", phone); localStorage.setItem("username", myName); localStorage.setItem("pfp", myPic);
-                    startApp();
+    async function authMe() {
+        const p = document.getElementById('ap').value, s = document.getElementById('as').value, u = document.getElementById('au').value, f = document.getElementById('up').files[0];
+        if(document.getElementById('ud').classList.contains('hidden')) {
+            db.ref('users/'+p).once('value', v => {
+                if(v.exists() && v.val().pass == s) {
+                    myPh=p; myNm=v.val().name; myPc=v.val().pfp;
+                    localStorage.setItem("ph",p); localStorage.setItem("nm",myNm); localStorage.setItem("pc",myPc);
+                    start();
                 } else alert("වැරදියි!");
             });
+        } else {
+            let img = f ? await getBase64(f) : "";
+            db.ref('users/'+p).set({pass:s, name:u, pfp:img}).then(() => location.reload());
         }
     }
 
-    function startApp() {
+    function start() {
         document.getElementById('auth-page').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
-        document.getElementById('display-name').innerText = myName;
-        document.getElementById('my-pfp').src = myPic || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-        loadRequests(); loadContacts(); loadAllStories();
+        document.getElementById('myn').innerText = myNm;
+        document.getElementById('myp').src = myPc || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+        loadAll();
     }
 
-    // --- Image Story Logic ---
-    async function postStory() {
-        const btn = document.getElementById('post-btn');
-        const txt = document.getElementById('story-input').value;
-        const file = document.getElementById('story-upload').files[0];
-        if(!txt && !file) return;
-
-        btn.disabled = true; btn.innerText = "Uploading...";
-        let imgUrl = "";
-        
-        if(file) {
-            const sRef = storage.ref('stories/' + Date.now());
-            await sRef.put(file);
-            imgUrl = await sRef.getDownloadURL();
-        }
-
-        db.ref('stories').push({
-            phone: myPhone, user: myName, pfp: myPic, 
-            text: txt, img: imgUrl, time: new Date().toLocaleString()
-        });
-
-        btn.disabled = false; btn.innerText = "Post Now";
-        closeStoryModal();
+    async function post() {
+        const t = document.getElementById('si').value, f = document.getElementById('su').files[0], b = document.getElementById('pb');
+        b.disabled = true; b.innerText = "Posting...";
+        let img = f ? await getBase64(f) : "";
+        db.ref('stories').push({ph:myPh, user:myNm, pfp:myPc, text:t, img:img, time:new Date().toLocaleString()});
+        document.getElementById('sm').classList.add('hidden'); b.disabled = false;
     }
 
-    function loadAllStories() {
+    function loadAll() {
         db.ref('stories').on('value', s => {
-            const feed = document.getElementById('story-feed'); feed.innerHTML = "";
-            s.forEach(st => {
-                const d = st.val();
-                feed.insertAdjacentHTML('afterbegin', `
-                    <div class="card">
-                        <div style="display:flex; align-items:center; margin-bottom:10px;">
-                            <img class="profile-img" src="${d.pfp || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}">
-                            <b>${d.user}</b>
-                        </div>
-                        <div style="font-size:15px;">${d.text}</div>
-                        ${d.img ? `<img src="${d.img}" class="story-img">` : ''}
-                        <div style="font-size:11px; color:#888; margin-top:10px;">${d.time}</div>
+            const f = document.getElementById('feed'); f.innerHTML = "";
+            s.forEach(x => {
+                const d = x.val();
+                f.insertAdjacentHTML('afterbegin', `<div class="card">
+                    <div style="display:flex; align-items:center;">
+                        <img src="${d.pfp||'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="pfp">
+                        <b>${d.user}</b>
                     </div>
-                `);
+                    <p>${d.text}</p>
+                    ${d.img ? `<img src="${d.img}" class="s-img">` : ''}
+                    <div style="margin-top:10px;">
+                        <span class="btn-act" onclick="like('${x.key}')">❤️ ${d.likes?Object.keys(d.likes).length:0}</span>
+                        <span class="btn-act" onclick="comm('${x.key}')">💬 Comment</span>
+                    </div>
+                </div>`);
+            });
+        });
+
+        db.ref('contacts/'+myPh).on('value', s => {
+            const c = document.getElementById('cons'); c.innerHTML = "";
+            s.forEach(x => {
+                c.innerHTML += `<div class="card" onclick="openCh('${x.val().ph}','${x.val().nm}')">👤 ${x.val().nm}</div>`;
+            });
+        });
+
+        db.ref('requests/'+myPh).on('value', s => {
+            const r = document.getElementById('reqs'); r.innerHTML = "";
+            s.forEach(x => {
+                r.innerHTML += `<div class="card" style="background:#fff3cd">Invite from ${x.val().nm} <button onclick="acc('${x.val().fr}','${x.val().nm}','${x.val().pc}')">Accept</button></div>`;
             });
         });
     }
 
-    // --- Contacts & Chat ---
-    function sendFriendRequest() {
-        const p = document.getElementById('search-phone').value.trim();
+    function like(k) { const r = db.ref(`stories/${k}/likes/${myPh}`); r.once('value', s => s.exists()?r.remove():r.set(true)); }
+    function comm(k) { let t = prompt("Comment:"); if(t) db.ref(`stories/${k}/comms`).push({u:myNm, t:t}); }
+
+    function inv() {
+        let p = document.getElementById('sp').value;
         db.ref('users/'+p).once('value', s => {
-            if(s.exists()) db.ref(`requests/${p}/${myPhone}`).set({ name: myName, from: myPhone, pfp: myPic });
+            if(s.exists()) db.ref(`requests/${p}/${myPh}`).set({nm:myNm, fr:myPh, pc:myPc});
         });
     }
 
-    function loadRequests() {
-        db.ref('requests/'+myPhone).on('value', s => {
-            const div = document.getElementById('requests-list'); div.innerHTML = "";
-            s.forEach(req => {
-                const d = req.val();
-                div.innerHTML += `<div class="card" style="background:#fff3cd">Invite: <b>${d.name}</b> <button onclick="acceptFriend('${d.from}','${d.name}','${d.pfp}')">Accept</button></div>`;
+    function acc(p,n,pc) {
+        db.ref(`contacts/${myPh}/${p}`).set({ph:p, nm:n, pc:pc});
+        db.ref(`contacts/${p}/${myPh}`).set({ph:myPh, nm:myNm, pc:myPc});
+        db.ref(`requests/${myPh}/${p}`).remove();
+    }
+
+    let curCh = "";
+    function openCh(p,n) {
+        curCh = myPh < p ? myPh+"_"+p : p+"_"+myPh;
+        document.getElementById('ct').innerText = n;
+        document.getElementById('cw').classList.remove('hidden');
+        db.ref('chats/'+curCh).on('value', s => {
+            const m = document.getElementById('mc'); m.innerHTML = "";
+            s.forEach(x => {
+                const isMe = x.val().s == myPh;
+                m.innerHTML += `<div style="align-self:${isMe?'flex-end':'flex-start'}; background:${isMe?var(--viber):'white'}; color:${isMe?'white':'black'}; padding:10px; border-radius:10px; margin-bottom:5px;">${x.val().t}</div>`;
             });
+            m.scrollTop = m.scrollHeight;
         });
     }
 
-    function acceptFriend(fP, fN, fPic) {
-        db.ref(`contacts/${myPhone}/${fP}`).set({ name: fN, phone: fP, pfp: fPic });
-        db.ref(`contacts/${fP}/${myPhone}`).set({ name: myName, phone: myPhone, pfp: myPic });
-        db.ref(`requests/${myPhone}/${fP}`).remove();
+    function send() {
+        let t = document.getElementById('mi').value;
+        if(t) db.ref('chats/'+curCh).push({s:myPh, t:t});
+        document.getElementById('mi').value = "";
     }
 
-    function loadContacts() {
-        db.ref('contacts/'+myPhone).on('value', s => {
-            const list = document.getElementById('contacts-list'); list.innerHTML = "";
-            s.forEach(c => {
-                const d = c.val();
-                list.innerHTML += `<div class="card" style="display:flex; align-items:center;" onclick="openChat('${d.phone}','${d.name}')">
-                    <img src="${d.pfp || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="profile-img">
-                    <b>${d.name}</b>
-                </div>`;
-            });
-        });
-    }
-
-    function openChat(p, n) {
-        document.getElementById('chat-target').innerText = n;
-        document.getElementById('chat-win').classList.remove('hidden');
-        const cid = myPhone < p ? myPhone+"_"+p : p+"_"+myPhone;
-        db.ref('chats/'+cid).on('value', s => {
-            const b = document.getElementById('msg-container'); b.innerHTML = "";
-            s.forEach(m => {
-                const isMe = m.val().s == myPhone;
-                b.innerHTML += `<div style="align-self:${isMe?'flex-end':'flex-start'}; background:${isMe?'#dcf8c6':'white'}; padding:10px; border-radius:10px; margin-bottom:5px;">${m.val().t}</div>`;
-            });
-            b.scrollTop = b.scrollHeight;
-        });
-        window.currentCID = cid;
-    }
-
-    function sendMsg() {
-        const t = document.getElementById('m-in').value;
-        if(t) db.ref('chats/'+window.currentCID).push({s: myPhone, t: t});
-        document.getElementById('m-in').value = "";
-    }
-
-    function logout() { localStorage.clear(); location.reload(); }
-    function showPage(id, el) { 
-        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); 
+    function pg(id,el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         el.classList.add('active');
-    }
-    function closeChat() { document.getElementById('chat-win').classList.add('hidden'); }
-    function openStoryModal() { document.getElementById('story-modal').classList.remove('hidden'); }
-    function closeStoryModal() { 
-        document.getElementById('story-modal').classList.add('hidden'); 
-        document.getElementById('story-input').value = "";
-        document.getElementById('story-upload').value = "";
     }
 </script>
 </body>

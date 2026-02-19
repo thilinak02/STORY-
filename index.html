@@ -3,38 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>STORY - Pro View</title>
+    <title>STORY PRO - Master Edition</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.7); }
-        body { 
-            font-family: sans-serif; margin: 0; 
-            background: #000 no-repeat center center fixed; 
-            background-size: cover; 
-            color: white; height: 100vh; 
-            overflow: hidden;
-        }
-        .content-wrap { height: 100vh; display: flex; flex-direction: column; position: relative; }
+        :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.75); }
+        body { font-family: sans-serif; margin: 0; background: #000 no-repeat center center fixed; background-size: cover; color: white; height: 100vh; overflow: hidden; transition: 0.5s; }
+        .content-wrap { height: 100vh; display: flex; flex-direction: column; }
         .hidden { display: none !important; }
-        header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; flex-shrink: 0; }
-        .page { 
-            flex: 1; overflow-y: auto; overflow-x: hidden;
-            -webkit-overflow-scrolling: touch; padding-bottom: 100px; 
-            overscroll-behavior-y: contain;
-        }
-        .card { background: var(--glass); backdrop-filter: blur(10px); padding: 15px; margin: 15px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative; }
-        .pfp { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; }
-        .story-text { font-size: 16px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; color: #fff; margin: 10px 0; }
-        .see-more { color: #3498db; cursor: pointer; font-weight: bold; padding: 5px 0; display: inline-block; }
-        .action-bar { display: flex; gap: 12px; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; }
-        .act-btn { cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px; padding: 8px 15px; background: rgba(255,255,255,0.15); border-radius: 20px; }
-        .act-btn.liked { color: #ff4757; background: rgba(255, 71, 87, 0.3); }
-        .nav-bar { background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); display: flex; height: 75px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #333; z-index: 100; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: #aaa; }
+        header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+        #notice-bar { background: #f1c40f; color: #000; padding: 10px; font-size: 13px; font-weight: bold; text-align: center; border-bottom: 2px solid #d35400; display: none; }
+        .page { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+        .card { background: var(--glass); backdrop-filter: blur(10px); padding: 15px; margin: 10px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative; }
+        .story-img { width: 100%; border-radius: 10px; margin-top: 10px; display: block; }
+        .nav-bar { background: #000; display: flex; height: 70px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #333; z-index: 100; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #aaa; cursor: pointer; }
         .nav-item.active { color: white; font-weight: bold; }
-        input, button, textarea { border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; }
+        input, button, textarea { border-radius: 20px; border: 1px solid #444; padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; background: #222; color: white; outline: none; }
         #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
+        .fr-btn { width: auto; padding: 4px 10px; font-size: 10px; background: #3498db; border: none; border-radius: 10px; cursor: pointer; color: white; }
     </style>
 </head>
 <body>
@@ -42,22 +29,19 @@
 <div class="content-wrap">
     <div id="main-app" class="hidden" style="display:flex; flex-direction:column; height:100%;">
         <header>
-            <div style="display:flex; align-items:center; gap:10px;">
-                <img id="myp" class="pfp" src="">
-                <div>
-                    <span id="myn" style="font-weight:bold;">User</span><br>
-                    <div style="display:flex; gap:5px;">
-                        <button id="adm-btn" class="hidden" style="width:auto; padding:2px 8px; font-size:10px; background:#ff4757; color:white; border:none; border-radius:5px; margin:0;">ADMIN</button>
-                        <button id="bg-btn" class="hidden" onclick="changeBG()" style="width:auto; padding:2px 8px; font-size:10px; background:#27ae60; color:white; border:none; border-radius:5px; margin:0;">🎨 BG</button>
-                    </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <b id="myn">Story Pro</b>
+                <div id="adm-area" class="hidden" style="display:flex; gap:5px;">
+                    <label for="bg-upload" style="background:red; font-size:9px; padding:3px 6px; border-radius:5px; cursor:pointer;">BG</label>
+                    <button onclick="setNotice()" style="background:orange; font-size:9px; padding:3px 6px; border-radius:5px; width:auto; border:none; margin:0; color:black;">NOTICE</button>
+                    <input type="file" id="bg-upload" accept="image/*" class="hidden">
                 </div>
             </div>
-            <button onclick="logout()" style="width:auto; padding:5px 10px; background:none; border:1px solid white; color:white; font-size:10px;">Logout</button>
+            <button onclick="logout()" style="width:auto; padding:4px 8px; background:none; border:1px solid #fff; font-size:10px;">Logout</button>
         </header>
-
-        <div id="p-chats" class="page"><div id="cons"></div></div>
-        <div id="p-stories" class="page hidden"><div id="feed"></div></div>
-
+        <div id="notice-bar"></div>
+        <div id="p-chats" class="page"><h4 style="margin:15px;">Friends Chat</h4><div id="cons"></div></div>
+        <div id="p-stories" class="page hidden"><h4 style="margin:15px;">Feed</h4><div id="feed"></div></div>
         <div class="nav-bar">
             <div class="nav-item active" onclick="pg('p-chats',this)">💬 Chats</div>
             <div class="nav-item" onclick="pg('p-stories',this)">📖 Stories</div>
@@ -65,216 +49,156 @@
         </div>
     </div>
 
-    <div id="auth-page" class="hidden" style="padding:30px; margin-top:50px;">
+    <div id="auth-page" class="hidden" style="padding:40px;">
         <div class="card">
             <h2 style="text-align:center;">Login</h2>
             <input id="ap" type="tel" placeholder="Phone Number">
             <input id="as" type="password" placeholder="Password">
-            <div id="ud" class="hidden">
-                <input id="au" placeholder="Username">
-                <input id="au_pfp" placeholder="Profile Photo URL">
-            </div>
-            <button onclick="authMe()" style="background:var(--viber); color:white; border:none;">Continue</button>
-            <p onclick="tgl()" style="text-align:center; cursor:pointer; color:#ccc; margin-top:15px;">Create Account</p>
+            <div id="ud" class="hidden"><input id="au" placeholder="Username"></div>
+            <button onclick="authMe()" style="background:var(--viber); border:none; font-weight:bold;">ENTER</button>
+            <p onclick="tgl()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa;">Create Account</p>
         </div>
     </div>
 </div>
 
 <div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; padding:20px; box-sizing:border-box;">
-    <h1 onclick="history.back()" style="float:right; cursor:pointer;">&times;</h1>
-    <h3 id="modal-title">New Story</h3>
-    <textarea id="si" placeholder="What's on your mind? (**bold**)" rows="10" style="background:#222; color:white; font-size:16px;"></textarea>
-    <button id="post-btn" onclick="postStory()" style="background:var(--viber); color:white; border:none;">Post Story</button>
+    <h3 id="m-title">New Post</h3>
+    <textarea id="si" placeholder="Write... (**bold**)" rows="6"></textarea>
+    <div id="img-field"><input type="file" id="img-input" accept="image/*"></div>
+    <button id="post-btn" onclick="postStory()" style="background:var(--viber); border:none;">Post Now</button>
+    <button onclick="history.back()" style="background:#444; border:none;">Cancel</button>
 </div>
 
 <div id="chat-window" class="hidden">
-    <header><span onclick="history.back()" style="cursor:pointer; font-size:20px;">⬅</span> <b id="chat-name">User</b></header>
+    <header><span onclick="history.back()" style="font-size:24px;">⬅</span> <b id="chat-name">User</b></header>
     <div id="msg-container" class="page" style="padding:15px; display:flex; flex-direction:column;"></div>
-    <div style="padding:10px; display:flex; gap:5px; background:rgba(0,0,0,0.9); flex-shrink:0;">
-        <input id="msg-input" placeholder="Type..." style="margin:0; background:#222; color:white;">
-        <button onclick="sendMsg()" style="width:auto; background:var(--viber); color:white; border:none;">Send</button>
+    <div style="padding:10px; display:flex; gap:5px; background:#111;">
+        <input id="msg-input" placeholder="Type...">
+        <button onclick="sendMsg()" style="width:auto; background:var(--viber); border:none;">Send</button>
     </div>
 </div>
 
 <script>
-    const cfg = { databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com" };
-    firebase.initializeApp(cfg);
+    const firebaseConfig = { databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com" };
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
     const ADMIN_PH = "0712729189";
-    const ADMIN_PASS = "Thilinak9411@.";
+    const ADMIN_PW = "Thilinak9411@";
     const NOTIF_SOUND = new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3");
 
-    let myPh = localStorage.getItem("ph") || "";
-    let myNm = localStorage.getItem("nm") || "";
-    let myPc = localStorage.getItem("pc") || "";
-    let activeChatPh = "", editKey = null;
+    let myPh = localStorage.getItem("ph") || "", myNm = localStorage.getItem("nm") || "", activeChatPh = "", editKey = null, storyImgData = "";
 
-    window.onload = () => { syncBG(); if(myPh) start(); else document.getElementById('auth-page').classList.remove('hidden'); };
-    window.onpopstate = function() { closeChatUI(); closeStoryUI(); };
+    window.onload = () => { syncApp(); if(myPh) { start(); listenMsgs(); } else { document.getElementById('auth-page').classList.remove('hidden'); } };
+    window.onpopstate = () => { document.getElementById('sm').classList.add('hidden'); document.getElementById('chat-window').classList.add('hidden'); };
 
     function formatText(t) { return t ? t.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') : ""; }
+
+    function syncApp() {
+        db.ref('appConfig/bgImage').on('value', snap => { if(snap.exists()) document.body.style.backgroundImage = `url('${snap.val()}')`; });
+        db.ref('appConfig/notice').on('value', snap => {
+            const bar = document.getElementById('notice-bar');
+            if(snap.exists() && snap.val().trim() !== "") { bar.innerHTML = "📢 " + formatText(snap.val()); bar.style.display = "block"; } 
+            else { bar.style.display = "none"; }
+        });
+    }
+
+    function listenMsgs() {
+        db.ref('messages').on('child_added', (chatSnap) => {
+            if (chatSnap.key.includes(myPh)) {
+                db.ref('messages/' + chatSnap.key).limitToLast(1).on('child_added', (msgSnap) => {
+                    const m = msgSnap.val();
+                    if (m.sender !== myPh && m.time > (Date.now() - 3000)) {
+                        NOTIF_SOUND.play().catch(()=>{});
+                        if (activeChatPh === "" && Notification.permission === "granted") new Notification("New Message", { body: m.msg });
+                    }
+                });
+            }
+        });
+    }
+
+    function authMe() {
+        const p = document.getElementById('ap').value, s = document.getElementById('as').value;
+        if(p === ADMIN_PH && s === ADMIN_PW) {
+            localStorage.setItem("ph", p); localStorage.setItem("nm", "Admin"); location.reload(); return;
+        }
+        db.ref('users/'+p).once('value', v => {
+            if(v.exists() && v.val().pass == s) { localStorage.setItem("ph",p); localStorage.setItem("nm",v.val().name); location.reload(); }
+            else if(!v.exists() && !document.getElementById('ud').classList.contains('hidden')) {
+                const n = document.getElementById('au').value;
+                if(n) db.ref('users/'+p).set({pass:s, name:n}).then(()=> { localStorage.setItem("ph",p); localStorage.setItem("nm",n); location.reload(); });
+            } else alert("වැරදියි!");
+        });
+    }
 
     function start() {
         document.getElementById('auth-page').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
-        document.getElementById('myn').innerText = myNm;
-        document.getElementById('myp').src = myPc || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-        if(myPh === ADMIN_PH) { document.getElementById('adm-btn').classList.remove('hidden'); document.getElementById('bg-btn').classList.remove('hidden'); }
-        if (Notification.permission !== "granted") Notification.requestPermission();
-        loadStories(); loadUsers(); listenForNotifications();
-    }
-
-    function listenForNotifications() {
-        db.ref('users').once('value', s => {
-            s.forEach(u => {
-                if(u.key !== myPh) {
-                    const chatId = myPh < u.key ? myPh+"_"+u.key : u.key+"_"+myPh;
-                    db.ref('messages/'+chatId).limitToLast(1).on('child_added', mSnap => {
-                        const m = mSnap.val();
-                        if(m.sender !== myPh && m.time > (Date.now() - 5000)) {
-                            NOTIF_SOUND.play().catch(() => {});
-                            if(Notification.permission === "granted") new Notification("New Message: " + u.val().name, { body: m.msg });
-                        }
-                    });
-                }
-            });
-        });
-    }
-
-    function syncBG() { db.ref('appConfig/bgImage').on('value', snap => { if(snap.exists()) document.body.style.backgroundImage = "url('" + snap.val() + "')"; }); }
-    function changeBG() { const url = prompt("පසුබිම් පින්තූරයේ Link එක:"); if(url) db.ref('appConfig/bgImage').set(url.trim()); }
-
-    function openStoryModal() { 
-        editKey = null;
-        document.getElementById('modal-title').innerText = "New Story";
-        document.getElementById('post-btn').innerText = "Post Story";
-        document.getElementById('si').value = "";
-        document.getElementById('sm').classList.remove('hidden'); 
-        history.pushState({v:'m'}, ''); 
-    }
-
-    function editStory(key, oldTxt) {
-        editKey = key;
-        document.getElementById('modal-title').innerText = "Edit Story";
-        document.getElementById('post-btn').innerText = "Update Story";
-        document.getElementById('si').value = oldTxt;
-        document.getElementById('sm').classList.remove('hidden');
-        history.pushState({v:'m'}, '');
-    }
-
-    function closeStoryUI() { document.getElementById('sm').classList.add('hidden'); }
-
-    function postStory() {
-        const text = document.getElementById('si').value;
-        if(!text.trim()) return;
-        if(editKey) {
-            db.ref('stories/'+editKey).update({ text: text });
-        } else {
-            db.ref('stories').push({ uPh: myPh, user: myNm, text: text, time: Date.now() });
-        }
-        history.back();
+        document.getElementById('myn').innerText = "Hi, " + myNm;
+        if(myPh === ADMIN_PH) document.getElementById('adm-area').classList.remove('hidden');
+        loadStories(); loadFriends();
+        if(Notification.permission !== "granted") Notification.requestPermission();
     }
 
     function loadStories() {
         db.ref('stories').on('value', snap => {
             const feed = document.getElementById('feed'); feed.innerHTML = "";
             snap.forEach(x => {
-                const s = x.val(); const key = x.key;
-                let rawText = s.text, displayTxt = rawText, seeMoreBtn = "";
-                if (rawText.length > 100) {
-                    displayTxt = rawText.substring(0, 100) + "...";
-                    seeMoreBtn = `<span class="see-more" onclick="this.parentElement.innerHTML=formatText(decodeURIComponent('${encodeURIComponent(rawText)}'))">See More</span>`;
-                }
-                const lCount = s.likes ? Object.keys(s.likes).length : 0;
-                const cCount = s.comments ? Object.keys(s.comments).length : 0;
-                const iLiked = s.likes && s.likes[myPh] ? "liked" : "";
-                
-                const canManage = (s.uPh === myPh || myPh === ADMIN_PH);
-
+                const s = x.val(); const can = (s.uPh === myPh || myPh === ADMIN_PH);
                 feed.insertAdjacentHTML('afterbegin', `<div class="card">
-                    ${canManage ? `<div style="position:absolute; right:15px; top:15px; display:flex; gap:10px;">
-                        <span style="color:#3498db; cursor:pointer;" onclick="editStory('${key}', decodeURIComponent('${encodeURIComponent(rawText)}'))">✏️</span>
-                        <span style="color:#ff4757; cursor:pointer;" onclick="deleteStory('${key}')">🗑️</span>
-                    </div>` : ''}
-                    <b style="color:#a29bfe; font-size:16px;">${s.user}</b>
-                    <div class="story-text">${formatText(displayTxt)}${seeMoreBtn}</div>
-                    <div class="action-bar"><div class="act-btn ${iLiked}" onclick="toggleLike('${key}')">❤️ ${lCount}</div><div class="act-btn" onclick="addComment('${key}')">💬 ${cCount}</div></div>
-                    <div id="cmts-${key}" style="font-size:12px; margin-top:10px; color:#ddd;"></div>
+                    <div style="display:flex; justify-content:space-between;"><b>${s.user}</b>${s.uPh!==myPh?`<button class="fr-btn" onclick="sendReq('${s.uPh}')">➕ Friend</button>`:''}</div>
+                    <div style="margin:10px 0;">${formatText(s.text)}</div>
+                    ${s.img?`<img src="${s.img}" class="story-img">`:''}
+                    ${can ? `<div style="text-align:right; margin-top:5px;"><span onclick="editStory('${x.key}','${s.text}')" style="color:#3498db; cursor:pointer;">✏️</span> <span onclick="delStory('${x.key}')" style="color:#ff4757; cursor:pointer; margin-left:10px;">🗑️</span></div>`:''}
                 </div>`);
-                loadComments(key);
             });
         });
     }
 
-    function toggleLike(sid) { const ref = db.ref(`stories/${sid}/likes/${myPh}`); ref.once('value', snap => { if(snap.exists()) ref.remove(); else ref.set(true); }); }
-    function addComment(key) { const c = prompt("Comment:"); if(c) db.ref('stories/'+key+'/comments').push({user: myNm, msg: c}); }
-    function loadComments(key) {
-        db.ref('stories/'+key+'/comments').limitToLast(5).on('value', snap => {
-            const div = document.getElementById('cmts-'+key); div.innerHTML = "";
-            snap.forEach(c => { div.innerHTML += `<div style="margin-top:5px;"><b>${c.val().user}:</b> ${formatText(c.val().msg)}</div>`; });
-        });
+    function postStory() {
+        const txt = document.getElementById('si').value;
+        if(editKey) db.ref('stories/'+editKey).update({ text: txt }).then(() => history.back());
+        else db.ref('stories').push({ uPh:myPh, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => history.back());
     }
-    function deleteStory(key) { if(confirm("Delete story?")) db.ref('stories/'+key).remove(); }
 
-    function loadUsers() {
-        db.ref('users').on('value', s => {
-            const container = document.getElementById('cons'); container.innerHTML = "";
-            s.forEach(child => {
-                if(child.key !== myPh) {
-                    const u = child.val();
-                    container.innerHTML += `<div class="card" onclick="openChat('${child.key}','${u.name}')" style="display:flex; align-items:center; gap:12px; cursor:pointer;">
-                        <img src="${u.pfp || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="pfp">
-                        <div><b>${u.name}</b><br><small style="color:#2ecc71;">● Online</small></div>
-                    </div>`;
-                }
+    function editStory(k, t) { editKey = k; document.getElementById('m-title').innerText = "Edit"; document.getElementById('si').value = t; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); history.pushState({v:'m'}, ''); }
+    function delStory(k) { if(confirm("Delete?")) db.ref('stories/'+k).remove(); }
+    function sendReq(to) { db.ref('friends/'+to+'/'+myPh).set({status:'pending', name:myNm}); alert("Sent!"); }
+    function loadFriends() {
+        db.ref('friends/'+myPh).on('value', snap => {
+            const c = document.getElementById('cons'); c.innerHTML = "";
+            snap.forEach(f => {
+                if(f.val().status==='accepted') c.innerHTML += `<div class="card" onclick="openChat('${f.key}','${f.val().name}')">👤 ${f.val().name}</div>`;
+                else if(f.val().status==='pending') c.innerHTML += `<div class="card">Req: ${f.val().name} <button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${f.val().name}')">Accept</button></div>`;
             });
         });
     }
-
+    function acc(ph, nm) { db.ref('friends/'+myPh+'/'+ph).set({status:'accepted', name:nm}); db.ref('friends/'+ph+'/'+myPh).set({status:'accepted', name:myNm}); }
     function openChat(ph, name) {
         activeChatPh = ph; document.getElementById('chat-name').innerText = name;
-        document.getElementById('chat-window').classList.remove('hidden');
-        history.pushState({v:'c'}, '');
-        const chatId = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
-        db.ref('messages/'+chatId).on('value', snap => {
+        document.getElementById('chat-window').classList.remove('hidden'); history.pushState({v:'c'}, '');
+        const cid = myPh < ph ? myPh+"_"+ph : ph+"_"+myPh;
+        db.ref('messages/'+cid).on('value', s => {
             const mc = document.getElementById('msg-container'); mc.innerHTML = "";
-            snap.forEach(m => {
-                const side = m.val().sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:rgba(255,255,255,0.2);';
-                mc.innerHTML += `<div style="${side} max-width:75%; padding:10px; border-radius:15px; margin:5px; backdrop-filter:blur(5px);">${formatText(m.val().msg)}</div>`;
+            s.forEach(m => {
+                const side = m.val().sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;';
+                mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%;">${formatText(m.val().msg)}</div>`;
             });
             mc.scrollTop = mc.scrollHeight;
         });
     }
-
-    function closeChatUI() { document.getElementById('chat-window').classList.add('hidden'); }
     function sendMsg() {
         const msg = document.getElementById('msg-input').value; if(!msg.trim()) return;
-        const chatId = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
-        db.ref('messages/'+chatId).push({ sender: myPh, msg: msg, time: Date.now() });
+        const cid = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
+        db.ref('messages/'+cid).push({ sender: myPh, msg: msg, time: Date.now() });
         document.getElementById('msg-input').value = "";
     }
-
+    function setNotice() { const m = prompt("Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
     function logout() { localStorage.clear(); location.reload(); }
-    function pg(id, el) { 
-        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-        document.getElementById(id).classList.remove('hidden');
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        el.classList.add('active');
-    }
     function tgl() { document.getElementById('ud').classList.remove('hidden'); }
-
-    function authMe() {
-        const p = document.getElementById('ap').value, s = document.getElementById('as').value;
-        if(p === ADMIN_PH && s === ADMIN_PASS) { localStorage.setItem("ph",p); localStorage.setItem("nm","Admin"); localStorage.setItem("pc",""); location.reload(); return; }
-        db.ref('users/'+p).once('value', v => {
-            if(v.exists() && v.val().pass == s) { localStorage.setItem("ph",p); localStorage.setItem("nm",v.val().name); localStorage.setItem("pc",v.val().pfp || ""); location.reload(); }
-            else if(!v.exists() && !document.getElementById('ud').classList.contains('hidden')) {
-                const u = document.getElementById('au').value, pf = document.getElementById('au_pfp').value;
-                db.ref('users/'+p).set({pass:s, name:u, pfp:pf}).then(() => { localStorage.setItem("ph",p); localStorage.setItem("nm",u); localStorage.setItem("pc",pf); location.reload(); });
-            } else alert("Details Incorrect");
-        });
-    }
+    function pg(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active'); if(id==='p-chats') activeChatPh=""; }
+    function openStoryModal() { editKey = null; storyImgData = ""; document.getElementById('si').value = ""; document.getElementById('img-field').classList.remove('hidden'); document.getElementById('sm').classList.remove('hidden'); history.pushState({v:'m'}, ''); }
+    document.getElementById('bg-upload').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); } });
+    document.getElementById('img-input').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>storyImgData=ev.target.result; r.readAsDataURL(f); } });
 </script>
 </body>
 </html>

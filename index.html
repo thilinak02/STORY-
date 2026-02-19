@@ -8,36 +8,28 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root { --viber: #7360f2; --glass: rgba(255, 255, 255, 0.12); }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #000; color: white; height: 100vh; overflow: hidden; }
+        body { font-family: sans-serif; margin: 0; background: #000; height: 100vh; color: white; overflow: hidden; }
         .content-wrap { position: relative; height: 100vh; display: flex; flex-direction: column; }
         .hidden { display: none !important; }
         
-        input, button, textarea { border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; background: white; }
-        header { background: var(--viber); padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        .page { flex: 1; overflow-y: auto; padding-bottom: 90px; }
+        input, button, textarea { border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; background: white; color: black; }
+        header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .page { flex: 1; overflow-y: auto; padding-bottom: 90px; -webkit-overflow-scrolling: touch; }
         
-        /* Story Card */
-        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 15px; margin: 12px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); position: relative; }
-        .user-name { color: #a29bfe; font-weight: bold; font-size: 16px; display: block; margin-bottom: 5px; }
-        .story-text { font-size: 15px; line-height: 1.5; margin: 10px 0; white-space: pre-wrap; color: #efefef; }
-        .see-more { color: #3498db; cursor: pointer; font-weight: bold; margin-left: 5px; }
+        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 15px; margin: 10px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.15); position: relative; }
+        .pfp { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; }
         
-        /* Like & Comment Bar */
-        .action-bar { display: flex; gap: 15px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); }
-        .act-btn { cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.05); transition: 0.2s; border: 1px solid transparent; }
-        .act-btn:hover { background: rgba(255,255,255,0.1); }
-        .act-btn.liked { color: #ff4757; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); }
-        .count-num { font-weight: 600; font-family: sans-serif; }
-        
-        /* Chat UI */
-        .msg { max-width: 75%; padding: 10px 15px; border-radius: 18px; margin: 5px 0; font-size: 14px; }
-        .me { align-self: flex-end; background: var(--viber); color: white; border-bottom-right-radius: 2px; }
-        .you { align-self: flex-start; background: #2a2a2a; color: white; border-bottom-left-radius: 2px; }
-        
-        .nav-bar { background: rgba(15, 15, 15, 0.95); display: flex; height: 70px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #222; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: #777; cursor: pointer; }
-        .nav-item.active { color: white; font-weight: bold; }
+        .story-text { font-size: 15px; line-height: 1.5; margin: 10px 0; white-space: pre-wrap; word-wrap: break-word; }
+        .see-more { color: #3498db; cursor: pointer; font-weight: bold; }
 
+        .action-bar { display: flex; gap: 15px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
+        .act-btn { cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; padding: 5px 12px; background: rgba(255,255,255,0.1); border-radius: 15px; }
+        .act-btn.liked { color: #ff4757; background: rgba(255, 71, 87, 0.2); }
+        
+        .nav-bar { background: rgba(0,0,0,0.95); display: flex; height: 65px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #333; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: #aaa; cursor: pointer; }
+        .nav-item.active { color: white; font-weight: bold; }
+        
         #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 4000; display: flex; flex-direction: column; }
     </style>
 </head>
@@ -46,46 +38,55 @@
 <div class="content-wrap">
     <div id="main-app" class="hidden">
         <header>
-            <span id="myn" style="letter-spacing: 1px;">STORY</span>
-            <button onclick="logout()" style="width:auto; padding:5px 12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.5); color:white; font-size:11px;">Logout</button>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img id="myp" class="pfp" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+                <div>
+                    <span id="myn" style="font-weight:bold;">User</span><br>
+                    <button id="adm-btn" class="hidden" style="width:auto; padding:2px 8px; font-size:10px; background:#ff4757; color:white; border:none; border-radius:5px;">ADMIN</button>
+                </div>
+            </div>
+            <button onclick="logout()" style="width:auto; padding:5px 10px; background:none; border:1px solid white; color:white; font-size:10px;">Logout</button>
         </header>
 
-        <div id="p-chats" class="page"><div id="cons" style="padding:10px;"></div></div>
+        <div id="p-chats" class="page"><div id="cons"></div></div>
 
         <div id="p-stories" class="page hidden">
-            <div style="padding:15px;"><button onclick="document.getElementById('sm').classList.remove('hidden')" style="background:var(--viber); color:white; border:none; font-weight:bold; box-shadow: 0 4px 15px rgba(115,96,242,0.3);">+ Post a Story</button></div>
+            <div style="padding:15px;"><button onclick="document.getElementById('sm').classList.remove('hidden')" style="background:var(--viber); color:white; border:none; font-weight:bold;">+ Post a Story</button></div>
             <div id="feed"></div>
         </div>
 
         <div class="nav-bar">
-            <div class="nav-item active" onclick="pg('p-chats',this)">💬<br>Chats</div>
-            <div class="nav-item" onclick="pg('p-stories',this)">📖<br>Stories</div>
+            <div class="nav-item active" onclick="pg('p-chats',this)">💬 Chats</div>
+            <div class="nav-item" onclick="pg('p-stories',this)">📖 Stories</div>
         </div>
     </div>
 
-    <div id="auth-page" class="hidden" style="padding:40px; text-align:center;">
-        <h2 style="color:var(--viber);">Welcome</h2>
+    <div id="auth-page" class="hidden" style="padding:30px; margin-top: 50px;">
+        <h2>Login / Sign Up</h2>
         <input id="ap" type="tel" placeholder="Phone Number">
         <input id="as" type="password" placeholder="Password">
-        <div id="ud" class="hidden"><input id="au" placeholder="Username"></div>
-        <button onclick="authMe()" style="background:var(--viber); color:white; border:none; margin-top:10px; font-weight:bold;">Continue</button>
-        <p onclick="tgl()" style="cursor:pointer; color:#777; font-size:14px; margin-top:15px;">Create an account</p>
+        <div id="ud" class="hidden">
+            <input id="au" placeholder="Username">
+            <input id="au_pfp" placeholder="Profile Picture URL">
+        </div>
+        <button onclick="authMe()" style="background:var(--viber); color:white; border:none;">Continue</button>
+        <p onclick="tgl()" style="text-align:center; cursor:pointer; color:#aaa;">Create Account</p>
     </div>
 </div>
 
-<div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:5000; padding:20px;">
+<div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:5000; padding:20px; box-sizing:border-box;">
     <h1 onclick="document.getElementById('sm').classList.add('hidden')" style="float:right; cursor:pointer;">&times;</h1>
-    <h3>What's on your mind?</h3>
-    <textarea id="si" placeholder="Write something..." rows="6" style="background:#111; color:white; border:1px solid #333; font-size:16px;"></textarea>
-    <button onclick="postStory()" style="background:var(--viber); color:white; border:none; padding:15px; font-weight:bold;">Post Now</button>
+    <h3>New Story</h3>
+    <textarea id="si" placeholder="What's happening?" rows="5" style="background:#222; color:white;"></textarea>
+    <button onclick="postStory()" style="background:var(--viber); color:white; border:none;">Post</button>
 </div>
 
 <div id="chat-window" class="hidden">
-    <header><span onclick="closeChat()" style="font-size:20px; cursor:pointer;">&larr;</span> <b id="chat-name">User</b> <span></span></header>
-    <div id="msg-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column;"></div>
-    <div style="padding:12px; display:flex; gap:8px; background:#111; border-top:1px solid #222;">
-        <input id="msg-input" placeholder="Type a message..." style="margin:0; background:#222; color:white; border:none;">
-        <button onclick="sendMsg()" style="width:auto; background:var(--viber); color:white; border:none; padding:0 20px;">Send</button>
+    <header><span onclick="closeChat()">⬅</span> <b id="chat-name">User</b></header>
+    <div id="msg-container" class="page" style="padding:15px; display:flex; flex-direction:column;"></div>
+    <div style="padding:10px; display:flex; gap:5px; background:#1a1a1a;">
+        <input id="msg-input" placeholder="Type..." style="margin:0; background:#222; color:white;">
+        <button onclick="sendMsg()" style="width:auto; background:var(--viber); color:white; border:none;">Send</button>
     </div>
 </div>
 
@@ -94,9 +95,12 @@
     firebase.initializeApp(cfg);
     const db = firebase.database();
 
+    const ADMIN_PH = "0712729189";
+    const ADMIN_PASS = "Thilinak9411@.";
+
     let myPh = localStorage.getItem("ph") || "";
     let myNm = localStorage.getItem("nm") || "";
-    let activeChatPh = "";
+    let myPc = localStorage.getItem("pc") || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
     window.onload = () => { if(myPh) start(); else document.getElementById('auth-page').classList.remove('hidden'); };
 
@@ -104,10 +108,11 @@
         document.getElementById('auth-page').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
         document.getElementById('myn').innerText = myNm;
+        document.getElementById('myp').src = myPc;
+        if(myPh === ADMIN_PH) document.getElementById('adm-btn').classList.remove('hidden');
         loadStories(); loadUsers();
     }
 
-    // --- STORY LOGIC ---
     function postStory() {
         const text = document.getElementById('si').value;
         if(!text.trim()) return;
@@ -123,9 +128,9 @@
                 const s = x.val(); const key = x.key;
                 let displayTxt = s.text;
                 let seeMoreBtn = "";
-                if (s.text.length > 120) {
-                    displayTxt = s.text.substring(0, 120) + "...";
-                    seeMoreBtn = `<span class="see-more" onclick="expand(this, '${encodeURIComponent(s.text)}')">See more</span>`;
+                if (s.text.length > 100) {
+                    displayTxt = s.text.substring(0, 100) + "...";
+                    seeMoreBtn = `<span class="see-more" onclick="expandStory(this, '${encodeURIComponent(s.text)}')">See More</span>`;
                 }
 
                 const lCount = s.likes ? Object.keys(s.likes).length : 0;
@@ -134,17 +139,14 @@
 
                 feed.insertAdjacentHTML('afterbegin', `
                     <div class="card">
-                        <span class="user-name">${s.user}</span>
+                        ${s.uPh === myPh || myPh === ADMIN_PH ? `<span style="float:right;color:#ff4757;cursor:pointer;" onclick="deleteStory('${key}')">🗑️</span>` : ''}
+                        <b style="color:var(--viber);">${s.user}</b>
                         <div class="story-text">${displayTxt}${seeMoreBtn}</div>
                         <div class="action-bar">
-                            <div class="act-btn ${iLiked}" onclick="toggleLike('${key}')">
-                                ❤️ <span class="count-num">${lCount}</span>
-                            </div>
-                            <div class="act-btn" onclick="addComment('${key}')">
-                                💬 <span class="count-num">${cCount}</span>
-                            </div>
+                            <div class="act-btn ${iLiked}" onclick="toggleLike('${key}')">❤️ ${lCount}</div>
+                            <div class="act-btn" onclick="addComment('${key}')">💬 ${cCount}</div>
                         </div>
-                        <div id="cmts-${key}" style="font-size:12px; margin-top:10px; color:#aaa; border-top: 1px solid rgba(255,255,255,0.05); padding-top:8px;"></div>
+                        <div id="cmts-${key}" style="font-size:12px; margin-top:8px; color:#aaa;"></div>
                     </div>
                 `);
                 loadComments(key);
@@ -152,37 +154,40 @@
         });
     }
 
-    function expand(btn, txt) { btn.parentElement.innerHTML = decodeURIComponent(txt); }
+    function expandStory(btn, txt) {
+        btn.parentElement.innerHTML = decodeURIComponent(txt).replace(/\n/g,'<br>');
+    }
 
     function toggleLike(sid) {
         const ref = db.ref(`stories/${sid}/likes/${myPh}`);
-        ref.once('value', snap => {
-            if(snap.exists()) ref.remove(); else ref.set(true);
-        });
+        ref.once('value', snap => { if(snap.exists()) ref.remove(); else ref.set(true); });
     }
 
     function addComment(key) {
-        const c = prompt("Write a comment:");
-        if(c && c.trim()) db.ref('stories/'+key+'/comments').push({user: myNm, msg: c});
+        const c = prompt("Enter comment:");
+        if(c) db.ref('stories/'+key+'/comments').push({user: myNm, msg: c});
     }
 
     function loadComments(key) {
         db.ref('stories/'+key+'/comments').limitToLast(2).on('value', snap => {
-            const div = document.getElementById('cmts-'+key); 
-            if(!snap.exists()) { div.style.display="none"; return; }
-            div.style.display="block";
-            div.innerHTML = "";
-            snap.forEach(c => { div.innerHTML += `<div style="margin-bottom:3px;"><b>${c.val().user}:</b> ${c.val().msg}</div>`; });
+            const div = document.getElementById('cmts-'+key); div.innerHTML = "";
+            snap.forEach(c => { div.innerHTML += `<div><b>${c.val().user}:</b> ${c.val().msg}</div>`; });
         });
     }
 
-    // --- CHAT & AUTH LOGIC ---
+    function deleteStory(key) { if(confirm("Delete this story?")) db.ref('stories/'+key).remove(); }
+
     function loadUsers() {
         db.ref('users').on('value', s => {
             const container = document.getElementById('cons'); container.innerHTML = "";
             s.forEach(child => {
                 if(child.key !== myPh) {
-                    container.innerHTML += `<div class="card" onclick="openChat('${child.key}','${child.val().name}')" style="cursor:pointer; padding:12px;"><b>${child.val().name}</b><br><small style="color:#2ecc71;">● Online</small></div>`;
+                    const u = child.val();
+                    container.innerHTML += `
+                        <div class="card" onclick="openChat('${child.key}','${u.name}')" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                            <img src="${u.pfp || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="pfp">
+                            <div><b>${u.name}</b><br><small style="color:#2ecc71;">Online</small></div>
+                        </div>`;
                 }
             });
         });
@@ -195,8 +200,8 @@
         db.ref('messages/'+chatId).on('value', snap => {
             const mc = document.getElementById('msg-container'); mc.innerHTML = "";
             snap.forEach(m => {
-                const side = m.val().sender === myPh ? 'me' : 'you';
-                mc.innerHTML += `<div class="msg ${side}">${m.val().msg}</div>`;
+                const side = m.val().sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#222;';
+                mc.innerHTML += `<div style="${side} max-width:75%; padding:10px; border-radius:15px; margin:5px;">${m.val().msg}</div>`;
             });
             mc.scrollTop = mc.scrollHeight;
         });
@@ -211,22 +216,32 @@
     }
 
     function closeChat() { document.getElementById('chat-window').classList.add('hidden'); }
+    function logout() { localStorage.clear(); location.reload(); }
     function pg(id, el) { 
         document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         el.classList.add('active');
     }
-    function logout() { localStorage.clear(); location.reload(); }
-    function tgl() { document.getElementById('ud').classList.toggle('hidden'); }
+    function tgl() { document.getElementById('ud').classList.remove('hidden'); }
+
     function authMe() {
         const p = document.getElementById('ap').value, s = document.getElementById('as').value;
+        // Check Admin
+        if(p === ADMIN_PH && s === ADMIN_PASS) {
+            localStorage.setItem("ph",p); localStorage.setItem("nm","Admin"); localStorage.setItem("pc","https://cdn-icons-png.flaticon.com/512/149/149071.png");
+            location.reload(); return;
+        }
         db.ref('users/'+p).once('value', v => {
             if(v.exists() && v.val().pass == s) {
-                localStorage.setItem("ph",p); localStorage.setItem("nm",v.val().name); location.reload();
+                localStorage.setItem("ph",p); localStorage.setItem("nm",v.val().name); localStorage.setItem("pc",v.val().pfp || "");
+                location.reload();
             } else if(!v.exists() && !document.getElementById('ud').classList.contains('hidden')) {
-                const u = document.getElementById('au').value;
-                db.ref('users/'+p).set({pass:s, name:u}).then(() => { localStorage.setItem("ph",p); localStorage.setItem("nm",u); location.reload(); });
+                const u = document.getElementById('au').value, pf = document.getElementById('au_pfp').value;
+                db.ref('users/'+p).set({pass:s, name:u, pfp:pf}).then(() => { 
+                    localStorage.setItem("ph",p); localStorage.setItem("nm",u); localStorage.setItem("pc",pf); 
+                    location.reload(); 
+                });
             } else alert("Details Incorrect");
         });
     }

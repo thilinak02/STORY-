@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORY - Full Functional</title>
+    <title>STORY - Fix Edition</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -28,14 +28,12 @@
         
         .actions { display: flex; gap: 15px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
         .act-btn { cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; }
-        .cmnt-box { margin-top: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; font-size: 13px; }
-        .sm-btn { color: #7360f2; cursor: pointer; font-weight: bold; margin-left: 5px; }
+        .cmnt-box { margin-top: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; font-size: 13px; margin-bottom: 5px; }
+        .sm-btn { color: #00e5ff; cursor: pointer; font-weight: bold; margin-left: 5px; text-decoration: underline; }
 
         .nav-bar { background: rgba(0,0,0,0.6); backdrop-filter: blur(20px); display: flex; height: 65px; border-top: 1px solid rgba(255,255,255,0.1); }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: #ddd; cursor: pointer; }
         .nav-item.active { color: white; font-weight: bold; background: rgba(255,255,255,0.1); }
-        
-        #cw { position:fixed; top:0; left:0; width:100%; height:100%; background: #000; z-index:1000; display:flex; flex-direction:column; }
     </style>
 </head>
 <body>
@@ -138,6 +136,7 @@
     }
 
     function loadAll() {
+        // Load Stories
         db.ref('stories').on('value', s => {
             const f = document.getElementById('feed'); f.innerHTML = "";
             s.forEach(x => {
@@ -148,10 +147,13 @@
                 
                 let cmntsHtml = '';
                 if(d.comments) {
-                    Object.values(d.comments).slice(-2).forEach(c => {
+                    Object.values(d.comments).slice(-3).forEach(c => {
                         cmntsHtml += `<div class="cmnt-box"><b>${c.u}:</b> ${c.t}</div>`;
                     });
                 }
+
+                // encodeURIComponent භාවිතා කර See More එක fix කිරීම
+                const encodedText = encodeURIComponent(d.text);
 
                 f.insertAdjacentHTML('afterbegin', `
                     <div class="card">
@@ -159,7 +161,7 @@
                             <img src="${d.pfp||'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="pfp">
                             <b>${d.user}</b>
                         </div>
-                        <p id="txt-${x.key}">${displayTxt} ${isLong ? `<span class="sm-btn" onclick="showFull('${x.key}', \`${d.text.replace(/`/g, '\\`').replace(/\n/g, ' ')}\`)">See More</span>` : ''}</p>
+                        <p id="txt-${x.key}">${displayTxt} ${isLong ? `<span class="sm-btn" onclick="showFull('${x.key}', '${encodedText}')">See More</span>` : ''}</p>
                         ${d.img ? `<img src="${d.img}" class="s-img">` : ''}
                         <div class="actions">
                             <div class="act-btn" onclick="like('${x.key}')">❤️ <span>${likes}</span></div>
@@ -171,22 +173,27 @@
             });
         });
 
+        // Load Friends
         db.ref('contacts/'+myPh).on('value', s => {
-            const c = document.getElementById('cons'); c.innerHTML = "<h3>My Friends</h3>";
+            const c = document.getElementById('cons'); c.innerHTML = "<h3 style='margin:10px'>My Friends</h3>";
             s.forEach(x => {
                 c.innerHTML += `<div class="card">👤 ${x.val().nm}</div>`;
             });
         });
 
+        // Load Requests
         db.ref('requests/'+myPh).on('value', s => {
             const r = document.getElementById('reqs'); r.innerHTML = "";
             s.forEach(x => {
-                r.innerHTML += `<div class="card">${x.val().nm} sent a request <button onclick="acc('${x.val().fr}','${x.val().nm}','${x.val().pc}')">Accept</button></div>`;
+                r.innerHTML += `<div class="card">${x.val().nm} sent a request <button onclick="acc('${x.val().fr}','${x.val().nm}','${x.val().pc}')" style="width:auto;padding:5px;background:var(--viber);color:white;border:none;">Accept</button></div>`;
             });
         });
     }
 
-    function showFull(id, full) { document.getElementById('txt-'+id).innerText = full; }
+    // See More function fixed
+    function showFull(id, encoded) {
+        document.getElementById('txt-'+id).innerText = decodeURIComponent(encoded);
+    }
 
     function like(id) { db.ref(`stories/${id}/likes/${myPh}`).set(true); }
 
@@ -200,16 +207,16 @@
         const resDiv = document.getElementById('search-results');
         if(!q) { resDiv.innerHTML = ""; return; }
         db.ref('users').once('value', s => {
-            resDiv.innerHTML = "<h3>Search Results</h3>";
+            resDiv.innerHTML = "<h3 style='margin:10px'>Search Results</h3>";
             s.forEach(u => {
                 if(u.key !== myPh && u.val().name.toLowerCase().includes(q)) {
-                    resDiv.innerHTML += `<div class="card" style="display:flex;align-items:center;"><span style="flex:1;">${u.val().name}</span><button onclick="inv('${u.key}','${u.val().name}','${u.val().pfp||''}')" style="width:auto;padding:5px;">Add Friend</button></div>`;
+                    resDiv.innerHTML += `<div class="card" style="display:flex;align-items:center;"><span style="flex:1;">${u.val().name}</span><button onclick="inv('${u.key}')" style="width:auto;padding:5px;background:var(--viber);color:white;border:none;">Add Friend</button></div>`;
                 }
             });
         });
     }
 
-    function inv(p, name, pfp) { db.ref(`requests/${p}/${myPh}`).set({nm:myNm, fr:myPh, pc:myPc}); alert("Request Sent!"); }
+    function inv(p) { db.ref(`requests/${p}/${myPh}`).set({nm:myNm, fr:myPh, pc:myPc}); alert("Request Sent!"); }
 
     function acc(p, n, pc) {
         db.ref(`contacts/${myPh}/${p}`).set({ph:p, nm:n, pc:pc});
@@ -219,6 +226,7 @@
 
     async function post() {
         const t = document.getElementById('si').value, f = document.getElementById('su').files[0], b = document.getElementById('pb');
+        if(!t && !f) return;
         b.disabled = true; b.innerText = "Posting...";
         let img = f ? await processImg(f) : "";
         db.ref('stories').push({ph:myPh, user:myNm, pfp:myPc, text:t, img:img, time:new Date().toLocaleString()});

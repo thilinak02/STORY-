@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORY - FREE</title>
+    <title>STORY - Ultimate PRO</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -24,6 +24,8 @@
 </head>
 <body>
 
+<audio id="msg-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
+
 <div id="auth-page">
     <header>STORY Messenger</header>
     <div style="padding: 25px;">
@@ -32,7 +34,7 @@
         <input id="as" type="password" placeholder="Password">
         <div id="ud" class="hidden">
             <input id="au" placeholder="Username">
-            <p style="font-size:12px;">Profile Picture එකක් තෝරන්න:</p>
+            <p style="font-size:12px;">Profile පින්තූරයක් තෝරන්න:</p>
             <input type="file" id="up" accept="image/*">
         </div>
         <button onclick="authMe()" style="background:var(--viber); color:white;">Continue</button>
@@ -50,16 +52,16 @@
     </header>
 
     <div id="p-chats" class="page">
-        <div style="padding:15px; display:flex;">
-            <input id="sp" placeholder="අංකය...">
-            <button onclick="inv()" style="width:auto; margin-left:5px; background:var(--viber); color:white;">Invite</button>
+        <div style="padding:15px;">
+            <input id="sq" placeholder="නම හෝ අංකය සොයන්න..." oninput="searchUser()">
+            <div id="search-results" style="background:white; border-radius:10px; margin-top:5px;"></div>
         </div>
         <div id="reqs"></div>
         <div id="cons"></div>
     </div>
 
     <div id="p-stories" class="page hidden">
-        <div style="padding:15px;"><button onclick="document.getElementById('sm').classList.remove('hidden')" style="background:var(--viber); color:white;">+ Post Story</button></div>
+        <div style="padding:15px;"><button onclick="document.getElementById('sm').classList.remove('hidden')" style="background:var(--viber); color:white;">+ Post Story (Photo)</button></div>
         <div id="feed"></div>
     </div>
 
@@ -67,14 +69,15 @@
         <span onclick="this.parentElement.classList.add('hidden')" style="float:right; font-size:30px; cursor:pointer;">&times;</span>
         <h3>New Story</h3>
         <textarea id="si" placeholder="ඔයාගේ අදහස..."></textarea>
+        <p style="font-size:12px;">Photo එකක් තෝරන්න:</p>
         <input type="file" id="su" accept="image/*">
         <button id="pb" onclick="post()">Post Now</button>
     </div>
 
     <div id="cw" class="hidden" style="position:fixed; top:0; width:100%; height:100%; background:white; z-index:100; display:flex; flex-direction:column;">
-        <header><span onclick="document.getElementById('cw').classList.add('hidden')">⬅ Back</span><span id="ct">User</span><span></span></header>
+        <header><span onclick="closeCh()">⬅ Back</span><span id="ct">User</span><span></span></header>
         <div id="mc" style="flex:1; overflow-y:auto; padding:15px; background:#f0f2f5; display:flex; flex-direction:column;"></div>
-        <div style="padding:10px; display:flex; background:white;"><input id="mi" placeholder="Type..."><button onclick="send()" style="width:60px; background:var(--viber); color:white;">➔</button></div>
+        <div style="padding:10px; display:flex; background:white;"><input id="mi" placeholder="Type message..."><button onclick="send()" style="width:60px; background:var(--viber); color:white;">➔</button></div>
     </div>
 
     <div class="nav-bar">
@@ -89,6 +92,8 @@
     const db = firebase.database();
 
     let myPh = localStorage.getItem("ph") || "", myNm = localStorage.getItem("nm") || "", myPc = localStorage.getItem("pc") || "";
+    let curCh = "";
+
     if(myPh) start();
 
     function tgl() { document.getElementById('at').innerText="Sign Up"; document.getElementById('ud').classList.remove('hidden'); }
@@ -110,7 +115,7 @@
             });
         } else {
             let img = f ? await getBase64(f) : "";
-            db.ref('users/'+p).set({pass:s, name:u, pfp:img}).then(() => location.reload());
+            db.ref('users/'+p).set({pass:s, name:u, pfp:img, phone:p}).then(() => location.reload());
         }
     }
 
@@ -119,16 +124,68 @@
         document.getElementById('main-app').classList.remove('hidden');
         document.getElementById('myn').innerText = myNm;
         document.getElementById('myp').src = myPc || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+        
+        // Ask for Notification permission
+        if (Notification.permission !== "granted") Notification.requestPermission();
+        
         loadAll();
+        listenForGlobalMsgs();
     }
 
+    // --- Story with Photo ---
     async function post() {
         const t = document.getElementById('si').value, f = document.getElementById('su').files[0], b = document.getElementById('pb');
         b.disabled = true; b.innerText = "Posting...";
         let img = f ? await getBase64(f) : "";
         db.ref('stories').push({ph:myPh, user:myNm, pfp:myPc, text:t, img:img, time:new Date().toLocaleString()});
         document.getElementById('sm').classList.add('hidden'); b.disabled = false;
+        document.getElementById('si').value = ""; document.getElementById('su').value = "";
     }
+
+    // --- Sound & Notification Logic ---
+    function listenForGlobalMsgs() {
+        // මේකෙන් ඔයා chat window එකේ නැති වෙලාවක මැසේජ් එකක් ආවොත් දැනුම් දෙනවා
+        db.ref('chats').on('child_changed', snap => {
+            const chatId = snap.key;
+            if (chatId.includes(myPh) && chatId !== curCh) {
+                const msgs = snap.val();
+                const lastMsg = msgs[Object.keys(msgs).pop()];
+                if (lastMsg.s !== myPh) {
+                    playNotify(lastMsg.t);
+                }
+            }
+        });
+    }
+
+    function playNotify(text) {
+        document.getElementById('msg-sound').play().catch(e => console.log("Sound error"));
+        if (Notification.permission === "granted") {
+            new Notification("STORY Messenger", { body: "අලුත් මැසේජ් එකක්: " + text, icon: myPc });
+        }
+    }
+
+    // --- ඉතිරි වැඩ කොටස් ---
+    function searchUser() {
+        const q = document.getElementById('sq').value.toLowerCase();
+        const resDiv = document.getElementById('search-results');
+        if(!q) { resDiv.innerHTML = ""; return; }
+        db.ref('users').once('value', s => {
+            resDiv.innerHTML = "";
+            s.forEach(u => {
+                const d = u.val();
+                if(u.key === myPh) return;
+                if(d.name.toLowerCase().includes(q) || u.key.includes(q)) {
+                    resDiv.innerHTML += `<div style="display:flex;align-items:center;padding:10px;border-bottom:1px solid #eee;">
+                        <img src="${d.pfp||'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="pfp" style="width:30px;height:30px;">
+                        <span style="flex:1;"><b>${d.name}</b></span>
+                        <button onclick="inv('${u.key}')" style="width:auto;padding:5px;background:var(--viber);color:white;border:none;">Add</button>
+                    </div>`;
+                }
+            });
+        });
+    }
+
+    function inv(p) { db.ref(`requests/${p}/${myPh}`).set({nm:myNm, fr:myPh, pc:myPc}); alert("Invite Sent!"); }
 
     function loadAll() {
         db.ref('stories').on('value', s => {
@@ -166,20 +223,12 @@
     function like(k) { const r = db.ref(`stories/${k}/likes/${myPh}`); r.once('value', s => s.exists()?r.remove():r.set(true)); }
     function comm(k) { let t = prompt("Comment:"); if(t) db.ref(`stories/${k}/comms`).push({u:myNm, t:t}); }
 
-    function inv() {
-        let p = document.getElementById('sp').value;
-        db.ref('users/'+p).once('value', s => {
-            if(s.exists()) db.ref(`requests/${p}/${myPh}`).set({nm:myNm, fr:myPh, pc:myPc});
-        });
-    }
-
     function acc(p,n,pc) {
         db.ref(`contacts/${myPh}/${p}`).set({ph:p, nm:n, pc:pc});
         db.ref(`contacts/${p}/${myPh}`).set({ph:myPh, nm:myNm, pc:myPc});
         db.ref(`requests/${myPh}/${p}`).remove();
     }
 
-    let curCh = "";
     function openCh(p,n) {
         curCh = myPh < p ? myPh+"_"+p : p+"_"+myPh;
         document.getElementById('ct').innerText = n;
@@ -193,6 +242,8 @@
             m.scrollTop = m.scrollHeight;
         });
     }
+
+    function closeCh() { document.getElementById('cw').classList.add('hidden'); curCh = ""; }
 
     function send() {
         let t = document.getElementById('mi').value;

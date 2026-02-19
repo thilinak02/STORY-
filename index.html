@@ -7,28 +7,29 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --viber: #7360f2; --glass: rgba(255, 255, 255, 0.12); }
-        body { font-family: sans-serif; margin: 0; background: #000; height: 100vh; color: white; overflow: hidden; }
+        :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.6); }
+        body { font-family: sans-serif; margin: 0; background: #000; background-size: cover; background-position: center; background-attachment: fixed; color: white; height: 100vh; overflow: hidden; transition: background 0.5s ease; }
         .content-wrap { position: relative; height: 100vh; display: flex; flex-direction: column; }
         .hidden { display: none !important; }
         
         input, button, textarea { border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; background: white; color: black; }
-        header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; flex-shrink: 0; }
         
-        .page { flex: 1; overflow-y: auto; padding-bottom: 90px; -webkit-overflow-scrolling: touch; }
-        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 15px; margin: 10px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.15); position: relative; }
+        .page { flex: 1; overflow-y: auto; padding-bottom: 100px; -webkit-overflow-scrolling: touch; }
+        
+        /* Glass effect cards for better visibility on images */
+        .card { background: var(--glass); backdrop-filter: blur(10px); padding: 15px; margin: 10px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative; }
         .pfp { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; background: #333; }
         
-        /* Scrolling and Text Styles */
-        .story-content { max-height: 400px; overflow-y: auto; margin: 10px 0; padding-right: 5px; }
-        .story-text { font-size: 15px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; color: #efefef; }
-        .see-more { color: #3498db; cursor: pointer; font-weight: bold; display: block; margin-top: 5px; }
+        .story-content { margin: 10px 0; }
+        .story-text { font-size: 16px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        .see-more { color: #3498db; cursor: pointer; font-weight: bold; display: block; margin-top: 8px; }
 
-        .action-bar { display: flex; gap: 12px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
-        .act-btn { cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(255,255,255,0.1); border-radius: 15px; }
-        .act-btn.liked { color: #ff4757; background: rgba(255, 71, 87, 0.2); }
+        .action-bar { display: flex; gap: 12px; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; }
+        .act-btn { cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px; padding: 8px 15px; background: rgba(255,255,255,0.15); border-radius: 20px; }
+        .act-btn.liked { color: #ff4757; background: rgba(255, 71, 87, 0.3); }
         
-        .nav-bar { background: rgba(0,0,0,0.95); display: flex; height: 65px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #333; }
+        .nav-bar { background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); display: flex; height: 70px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #333; z-index: 20; }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: #aaa; cursor: pointer; }
         .nav-item.active { color: white; font-weight: bold; }
         
@@ -44,7 +45,10 @@
                 <img id="myp" class="pfp" src="">
                 <div>
                     <span id="myn" style="font-weight:bold;">User</span><br>
-                    <button id="adm-btn" class="hidden" style="width:auto; padding:2px 8px; font-size:10px; background:#ff4757; color:white; border:none; border-radius:5px;">ADMIN</button>
+                    <div style="display:flex; gap:5px;">
+                        <button id="adm-btn" class="hidden" style="width:auto; padding:2px 8px; font-size:10px; background:#ff4757; color:white; border:none; border-radius:5px; margin:0;">ADMIN</button>
+                        <button id="bg-btn" class="hidden" onclick="changeBG()" style="width:auto; padding:2px 8px; font-size:10px; background:#27ae60; color:white; border:none; border-radius:5px; margin:0;">🎨 BG</button>
+                    </div>
                 </div>
             </div>
             <button onclick="logout()" style="width:auto; padding:5px 10px; background:none; border:1px solid white; color:white; font-size:10px;">Logout</button>
@@ -63,15 +67,17 @@
     </div>
 
     <div id="auth-page" class="hidden" style="padding:30px; margin-top:50px;">
-        <h2>Login / Sign Up</h2>
-        <input id="ap" type="tel" placeholder="Phone Number">
-        <input id="as" type="password" placeholder="Password">
-        <div id="ud" class="hidden">
-            <input id="au" placeholder="Username">
-            <input id="au_pfp" placeholder="Profile Picture URL">
+        <div class="card" style="background: rgba(255,255,255,0.1);">
+            <h2 style="text-align:center;">Login / Sign Up</h2>
+            <input id="ap" type="tel" placeholder="Phone Number">
+            <input id="as" type="password" placeholder="Password">
+            <div id="ud" class="hidden">
+                <input id="au" placeholder="Username">
+                <input id="au_pfp" placeholder="Profile Picture URL">
+            </div>
+            <button onclick="authMe()" style="background:var(--viber); color:white; border:none; margin-top:10px;">Continue</button>
+            <p onclick="tgl()" style="text-align:center; cursor:pointer; color:#ccc; font-size:14px; margin-top:15px;">Create New Account</p>
         </div>
-        <button onclick="authMe()" style="background:var(--viber); color:white; border:none;">Continue</button>
-        <p onclick="tgl()" style="text-align:center; cursor:pointer; color:#aaa;">Create Account</p>
     </div>
 </div>
 
@@ -79,15 +85,15 @@
     <h1 onclick="document.getElementById('sm').classList.add('hidden')" style="float:right; cursor:pointer;">&times;</h1>
     <h3>New Story</h3>
     <p style="font-size:11px; color:#aaa;">Tip: Use **text** to make it bold</p>
-    <textarea id="si" placeholder="What's on your mind?" rows="5" style="background:#222; color:white;"></textarea>
+    <textarea id="si" placeholder="What's on your mind?" rows="8" style="background:#222; color:white; font-size:16px;"></textarea>
     <button onclick="postStory()" style="background:var(--viber); color:white; border:none;">Post</button>
 </div>
 
 <div id="chat-window" class="hidden">
-    <header><span onclick="closeChat()">⬅</span> <b id="chat-name">User</b></header>
+    <header><span onclick="closeChat()" style="cursor:pointer; font-size:20px;">⬅</span> <b id="chat-name">User</b></header>
     <div id="msg-container" class="page" style="padding:15px; display:flex; flex-direction:column;"></div>
-    <div style="padding:10px; display:flex; gap:5px; background:#1a1a1a;">
-        <input id="msg-input" placeholder="Type..." style="margin:0; background:#222; color:white;">
+    <div style="padding:10px; display:flex; gap:5px; background:rgba(0,0,0,0.8);">
+        <input id="msg-input" placeholder="Type a message..." style="margin:0; background:#222; color:white;">
         <button onclick="sendMsg()" style="width:auto; background:var(--viber); color:white; border:none;">Send</button>
     </div>
 </div>
@@ -104,20 +110,42 @@
     let myNm = localStorage.getItem("nm") || "";
     let myPc = localStorage.getItem("pc") || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
-    window.onload = () => { if(myPh) start(); else document.getElementById('auth-page').classList.remove('hidden'); };
+    window.onload = () => { 
+        syncBG();
+        if(myPh) start(); 
+        else document.getElementById('auth-page').classList.remove('hidden'); 
+    };
 
     function start() {
         document.getElementById('auth-page').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
         document.getElementById('myn').innerText = myNm;
         document.getElementById('myp').src = myPc;
-        if(myPh === ADMIN_PH) document.getElementById('adm-btn').classList.remove('hidden');
+        if(myPh === ADMIN_PH) {
+            document.getElementById('adm-btn').classList.remove('hidden');
+            document.getElementById('bg-btn').classList.remove('hidden');
+        }
         loadStories(); loadUsers();
     }
 
-    // Bold Formatting Function
+    // Sync Background from Firebase
+    function syncBG() {
+        db.ref('appConfig/bgImage').on('value', snap => {
+            if(snap.exists()) {
+                document.body.style.backgroundImage = `url('${snap.val()}')`;
+            }
+        });
+    }
+
+    // Admin Function: Change Background
+    function changeBG() {
+        const url = prompt("පසුබිමට එක් කිරීමට අවශ්‍ය පින්තූරයේ Link (URL) එක ඇතුළත් කරන්න:");
+        if(url) {
+            db.ref('appConfig/bgImage').set(url);
+        }
+    }
+
     function formatText(text) {
-        // Regex to find **text** and replace with <b>text</b>
         return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
     }
 
@@ -138,8 +166,8 @@
                 let displayTxt = rawText;
                 let seeMoreBtn = "";
 
-                if (rawText.length > 150) {
-                    displayTxt = rawText.substring(0, 150) + "...";
+                if (rawText.length > 100) {
+                    displayTxt = rawText.substring(0, 100) + "...";
                     seeMoreBtn = `<span class="see-more" onclick="expandStory(this, '${encodeURIComponent(rawText)}')">See More</span>`;
                 }
 
@@ -150,7 +178,7 @@
                 feed.insertAdjacentHTML('afterbegin', `
                     <div class="card">
                         ${s.uPh === myPh || myPh === ADMIN_PH ? `<span style="float:right;color:#ff4757;cursor:pointer;" onclick="deleteStory('${key}')">🗑️</span>` : ''}
-                        <b style="color:var(--viber); font-size:16px;">${s.user}</b>
+                        <b style="color:#a29bfe; font-size:16px;">${s.user}</b>
                         <div class="story-content">
                             <div class="story-text">${formatText(displayTxt)}${seeMoreBtn}</div>
                         </div>
@@ -158,7 +186,7 @@
                             <div class="act-btn ${iLiked}" onclick="toggleLike('${key}')">❤️ ${lCount}</div>
                             <div class="act-btn" onclick="addComment('${key}')">💬 ${cCount}</div>
                         </div>
-                        <div id="cmts-${key}" style="font-size:12px; margin-top:8px; color:#aaa;"></div>
+                        <div id="cmts-${key}" style="font-size:12px; margin-top:10px; color:#ddd;"></div>
                     </div>
                 `);
                 loadComments(key);
@@ -184,11 +212,11 @@
     function loadComments(key) {
         db.ref('stories/'+key+'/comments').limitToLast(2).on('value', snap => {
             const div = document.getElementById('cmts-'+key); div.innerHTML = "";
-            snap.forEach(c => { div.innerHTML += `<div><b>${c.val().user}:</b> ${c.val().msg}</div>`; });
+            snap.forEach(c => { div.innerHTML += `<div style="margin-top:5px;"><b>${c.val().user}:</b> ${c.val().msg}</div>`; });
         });
     }
 
-    function deleteStory(key) { if(confirm("Delete this?")) db.ref('stories/'+key).remove(); }
+    function deleteStory(key) { if(confirm("Delete this story?")) db.ref('stories/'+key).remove(); }
 
     function loadUsers() {
         db.ref('users').on('value', s => {
@@ -213,8 +241,8 @@
         db.ref('messages/'+chatId).on('value', snap => {
             const mc = document.getElementById('msg-container'); mc.innerHTML = "";
             snap.forEach(m => {
-                const side = m.val().sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#222;';
-                mc.innerHTML += `<div style="${side} max-width:75%; padding:10px; border-radius:15px; margin:5px;">${m.val().msg}</div>`;
+                const side = m.val().sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:rgba(255,255,255,0.2);';
+                mc.innerHTML += `<div style="${side} max-width:75%; padding:10px; border-radius:15px; margin:5px; backdrop-filter:blur(5px);">${m.val().msg}</div>`;
             });
             mc.scrollTop = mc.scrollHeight;
         });

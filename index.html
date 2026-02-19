@@ -14,16 +14,18 @@
         
         input, button, textarea { border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; background: white; color: black; }
         header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        
         .page { flex: 1; overflow-y: auto; padding-bottom: 90px; -webkit-overflow-scrolling: touch; }
-        
         .card { background: var(--glass); backdrop-filter: blur(15px); padding: 15px; margin: 10px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.15); position: relative; }
-        .pfp { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; }
+        .pfp { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; background: #333; }
         
-        .story-text { font-size: 15px; line-height: 1.5; margin: 10px 0; white-space: pre-wrap; word-wrap: break-word; }
-        .see-more { color: #3498db; cursor: pointer; font-weight: bold; }
+        /* Scrolling and Text Styles */
+        .story-content { max-height: 400px; overflow-y: auto; margin: 10px 0; padding-right: 5px; }
+        .story-text { font-size: 15px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; color: #efefef; }
+        .see-more { color: #3498db; cursor: pointer; font-weight: bold; display: block; margin-top: 5px; }
 
-        .action-bar { display: flex; gap: 15px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
-        .act-btn { cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; padding: 5px 12px; background: rgba(255,255,255,0.1); border-radius: 15px; }
+        .action-bar { display: flex; gap: 12px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
+        .act-btn { cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(255,255,255,0.1); border-radius: 15px; }
         .act-btn.liked { color: #ff4757; background: rgba(255, 71, 87, 0.2); }
         
         .nav-bar { background: rgba(0,0,0,0.95); display: flex; height: 65px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #333; }
@@ -39,7 +41,7 @@
     <div id="main-app" class="hidden">
         <header>
             <div style="display:flex; align-items:center; gap:10px;">
-                <img id="myp" class="pfp" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+                <img id="myp" class="pfp" src="">
                 <div>
                     <span id="myn" style="font-weight:bold;">User</span><br>
                     <button id="adm-btn" class="hidden" style="width:auto; padding:2px 8px; font-size:10px; background:#ff4757; color:white; border:none; border-radius:5px;">ADMIN</button>
@@ -49,7 +51,6 @@
         </header>
 
         <div id="p-chats" class="page"><div id="cons"></div></div>
-
         <div id="p-stories" class="page hidden">
             <div style="padding:15px;"><button onclick="document.getElementById('sm').classList.remove('hidden')" style="background:var(--viber); color:white; border:none; font-weight:bold;">+ Post a Story</button></div>
             <div id="feed"></div>
@@ -61,7 +62,7 @@
         </div>
     </div>
 
-    <div id="auth-page" class="hidden" style="padding:30px; margin-top: 50px;">
+    <div id="auth-page" class="hidden" style="padding:30px; margin-top:50px;">
         <h2>Login / Sign Up</h2>
         <input id="ap" type="tel" placeholder="Phone Number">
         <input id="as" type="password" placeholder="Password">
@@ -77,7 +78,8 @@
 <div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:5000; padding:20px; box-sizing:border-box;">
     <h1 onclick="document.getElementById('sm').classList.add('hidden')" style="float:right; cursor:pointer;">&times;</h1>
     <h3>New Story</h3>
-    <textarea id="si" placeholder="What's happening?" rows="5" style="background:#222; color:white;"></textarea>
+    <p style="font-size:11px; color:#aaa;">Tip: Use **text** to make it bold</p>
+    <textarea id="si" placeholder="What's on your mind?" rows="5" style="background:#222; color:white;"></textarea>
     <button onclick="postStory()" style="background:var(--viber); color:white; border:none;">Post</button>
 </div>
 
@@ -113,6 +115,12 @@
         loadStories(); loadUsers();
     }
 
+    // Bold Formatting Function
+    function formatText(text) {
+        // Regex to find **text** and replace with <b>text</b>
+        return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+    }
+
     function postStory() {
         const text = document.getElementById('si').value;
         if(!text.trim()) return;
@@ -126,11 +134,13 @@
             const feed = document.getElementById('feed'); feed.innerHTML = "";
             snap.forEach(x => {
                 const s = x.val(); const key = x.key;
-                let displayTxt = s.text;
+                let rawText = s.text;
+                let displayTxt = rawText;
                 let seeMoreBtn = "";
-                if (s.text.length > 100) {
-                    displayTxt = s.text.substring(0, 100) + "...";
-                    seeMoreBtn = `<span class="see-more" onclick="expandStory(this, '${encodeURIComponent(s.text)}')">See More</span>`;
+
+                if (rawText.length > 150) {
+                    displayTxt = rawText.substring(0, 150) + "...";
+                    seeMoreBtn = `<span class="see-more" onclick="expandStory(this, '${encodeURIComponent(rawText)}')">See More</span>`;
                 }
 
                 const lCount = s.likes ? Object.keys(s.likes).length : 0;
@@ -140,8 +150,10 @@
                 feed.insertAdjacentHTML('afterbegin', `
                     <div class="card">
                         ${s.uPh === myPh || myPh === ADMIN_PH ? `<span style="float:right;color:#ff4757;cursor:pointer;" onclick="deleteStory('${key}')">🗑️</span>` : ''}
-                        <b style="color:var(--viber);">${s.user}</b>
-                        <div class="story-text">${displayTxt}${seeMoreBtn}</div>
+                        <b style="color:var(--viber); font-size:16px;">${s.user}</b>
+                        <div class="story-content">
+                            <div class="story-text">${formatText(displayTxt)}${seeMoreBtn}</div>
+                        </div>
                         <div class="action-bar">
                             <div class="act-btn ${iLiked}" onclick="toggleLike('${key}')">❤️ ${lCount}</div>
                             <div class="act-btn" onclick="addComment('${key}')">💬 ${cCount}</div>
@@ -155,7 +167,8 @@
     }
 
     function expandStory(btn, txt) {
-        btn.parentElement.innerHTML = decodeURIComponent(txt).replace(/\n/g,'<br>');
+        const fullText = decodeURIComponent(txt);
+        btn.parentElement.innerHTML = formatText(fullText);
     }
 
     function toggleLike(sid) {
@@ -175,7 +188,7 @@
         });
     }
 
-    function deleteStory(key) { if(confirm("Delete this story?")) db.ref('stories/'+key).remove(); }
+    function deleteStory(key) { if(confirm("Delete this?")) db.ref('stories/'+key).remove(); }
 
     function loadUsers() {
         db.ref('users').on('value', s => {
@@ -184,9 +197,9 @@
                 if(child.key !== myPh) {
                     const u = child.val();
                     container.innerHTML += `
-                        <div class="card" onclick="openChat('${child.key}','${u.name}')" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <div class="card" onclick="openChat('${child.key}','${u.name}')" style="display:flex; align-items:center; gap:12px; cursor:pointer;">
                             <img src="${u.pfp || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="pfp">
-                            <div><b>${u.name}</b><br><small style="color:#2ecc71;">Online</small></div>
+                            <div><b>${u.name}</b><br><small style="color:#2ecc71;">● Online</small></div>
                         </div>`;
                 }
             });
@@ -227,7 +240,6 @@
 
     function authMe() {
         const p = document.getElementById('ap').value, s = document.getElementById('as').value;
-        // Check Admin
         if(p === ADMIN_PH && s === ADMIN_PASS) {
             localStorage.setItem("ph",p); localStorage.setItem("nm","Admin"); localStorage.setItem("pc","https://cdn-icons-png.flaticon.com/512/149/149071.png");
             location.reload(); return;

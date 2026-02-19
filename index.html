@@ -8,40 +8,39 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.7); }
-        body { font-family: sans-serif; margin: 0; background: #000; background-size: cover; background-position: center; background-attachment: fixed; color: white; height: 100vh; overflow: hidden; }
-        
-        /* Main Layout */
-        .content-wrap { height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        body { 
+            font-family: sans-serif; margin: 0; 
+            background: #000 no-repeat center center fixed; 
+            background-size: cover; 
+            color: white; height: 100vh; 
+            overflow: hidden;
+        }
+        .content-wrap { height: 100vh; display: flex; flex-direction: column; position: relative; }
         .hidden { display: none !important; }
-        
-        input, button, textarea { border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; background: white; color: black; }
-        header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; flex-shrink: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-        
-        /* THE FIX: Absolute smooth scrolling for the page */
-        .page { flex: 1; overflow-y: scroll; -webkit-overflow-scrolling: touch; padding-bottom: 150px; }
-        
+        header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; flex-shrink: 0; }
+        .page { 
+            flex: 1; overflow-y: auto; overflow-x: hidden;
+            -webkit-overflow-scrolling: touch; padding-bottom: 100px; 
+            overscroll-behavior-y: contain;
+        }
         .card { background: var(--glass); backdrop-filter: blur(10px); padding: 15px; margin: 15px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative; }
-        .pfp { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; background: #333; }
-        
-        /* Story Text: Natural growth, no height limits */
-        .story-text { font-size: 16px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; color: #fff; margin: 10px 0; display: block; }
-        .see-more { color: #3498db; cursor: pointer; font-weight: bold; display: inline-block; margin-top: 5px; padding: 5px 0; }
-
+        .pfp { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; }
+        .story-text { font-size: 16px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; color: #fff; margin: 10px 0; }
+        .see-more { color: #3498db; cursor: pointer; font-weight: bold; padding: 5px 0; display: inline-block; }
         .action-bar { display: flex; gap: 12px; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; }
         .act-btn { cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px; padding: 8px 15px; background: rgba(255,255,255,0.15); border-radius: 20px; }
         .act-btn.liked { color: #ff4757; background: rgba(255, 71, 87, 0.3); }
-        
-        .nav-bar { background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); display: flex; height: 75px; position: absolute; bottom: 0; width: 100%; border-top: 1px solid #333; z-index: 20; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: #aaa; cursor: pointer; }
+        .nav-bar { background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); display: flex; height: 75px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #333; z-index: 100; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: #aaa; }
         .nav-item.active { color: white; font-weight: bold; }
-        
-        #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 4000; display: flex; flex-direction: column; }
+        input, button, textarea { border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; }
+        #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
     </style>
 </head>
 <body>
 
 <div class="content-wrap">
-    <div id="main-app" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
+    <div id="main-app" class="hidden" style="display:flex; flex-direction:column; height:100%;">
         <header>
             <div style="display:flex; align-items:center; gap:10px;">
                 <img id="myp" class="pfp" src="">
@@ -62,7 +61,7 @@
         <div class="nav-bar">
             <div class="nav-item active" onclick="pg('p-chats',this)">💬 Chats</div>
             <div class="nav-item" onclick="pg('p-stories',this)">📖 Stories</div>
-            <div class="nav-item" onclick="document.getElementById('sm').classList.remove('hidden')">➕ Post</div>
+            <div class="nav-item" onclick="openStoryModal()">➕ Post</div>
         </div>
     </div>
 
@@ -76,23 +75,23 @@
                 <input id="au_pfp" placeholder="Profile Photo URL">
             </div>
             <button onclick="authMe()" style="background:var(--viber); color:white; border:none;">Continue</button>
-            <p onclick="tgl()" style="text-align:center; cursor:pointer; color:#ccc; margin-top:15px;">Create New Account</p>
+            <p onclick="tgl()" style="text-align:center; cursor:pointer; color:#ccc; margin-top:15px;">Create Account</p>
         </div>
     </div>
 </div>
 
-<div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:5000; padding:20px; box-sizing:border-box;">
-    <h1 onclick="document.getElementById('sm').classList.add('hidden')" style="float:right; cursor:pointer;">&times;</h1>
-    <h3>New Story</h3>
+<div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; padding:20px; box-sizing:border-box;">
+    <h1 onclick="history.back()" style="float:right; cursor:pointer;">&times;</h1>
+    <h3 id="modal-title">New Story</h3>
     <textarea id="si" placeholder="What's on your mind? (**bold**)" rows="10" style="background:#222; color:white; font-size:16px;"></textarea>
-    <button onclick="postStory()" style="background:var(--viber); color:white; border:none;">Post Story</button>
+    <button id="post-btn" onclick="postStory()" style="background:var(--viber); color:white; border:none;">Post Story</button>
 </div>
 
 <div id="chat-window" class="hidden">
-    <header><span onclick="closeChat()" style="cursor:pointer; font-size:20px;">⬅</span> <b id="chat-name">User</b></header>
+    <header><span onclick="history.back()" style="cursor:pointer; font-size:20px;">⬅</span> <b id="chat-name">User</b></header>
     <div id="msg-container" class="page" style="padding:15px; display:flex; flex-direction:column;"></div>
-    <div style="padding:10px; display:flex; gap:5px; background:rgba(0,0,0,0.85); flex-shrink:0;">
-        <input id="msg-input" placeholder="Type a message..." style="margin:0; background:#222; color:white;">
+    <div style="padding:10px; display:flex; gap:5px; background:rgba(0,0,0,0.9); flex-shrink:0;">
+        <input id="msg-input" placeholder="Type..." style="margin:0; background:#222; color:white;">
         <button onclick="sendMsg()" style="width:auto; background:var(--viber); color:white; border:none;">Send</button>
     </div>
 </div>
@@ -104,32 +103,77 @@
 
     const ADMIN_PH = "0712729189";
     const ADMIN_PASS = "Thilinak9411@.";
+    const NOTIF_SOUND = new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3");
 
     let myPh = localStorage.getItem("ph") || "";
     let myNm = localStorage.getItem("nm") || "";
-    let myPc = localStorage.getItem("pc") || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+    let myPc = localStorage.getItem("pc") || "";
+    let activeChatPh = "", editKey = null;
 
     window.onload = () => { syncBG(); if(myPh) start(); else document.getElementById('auth-page').classList.remove('hidden'); };
+    window.onpopstate = function() { closeChatUI(); closeStoryUI(); };
+
+    function formatText(t) { return t ? t.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') : ""; }
 
     function start() {
         document.getElementById('auth-page').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
         document.getElementById('myn').innerText = myNm;
-        document.getElementById('myp').src = myPc;
+        document.getElementById('myp').src = myPc || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
         if(myPh === ADMIN_PH) { document.getElementById('adm-btn').classList.remove('hidden'); document.getElementById('bg-btn').classList.remove('hidden'); }
-        loadStories(); loadUsers();
+        if (Notification.permission !== "granted") Notification.requestPermission();
+        loadStories(); loadUsers(); listenForNotifications();
     }
 
-    function syncBG() { db.ref('appConfig/bgImage').on('value', snap => { if(snap.exists()) document.body.style.backgroundImage = `url('${snap.val()}')`; }); }
-    function changeBG() { const url = prompt("Background Image URL:"); if(url) db.ref('appConfig/bgImage').set(url); }
-    function formatText(text) { return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); }
+    function listenForNotifications() {
+        db.ref('users').once('value', s => {
+            s.forEach(u => {
+                if(u.key !== myPh) {
+                    const chatId = myPh < u.key ? myPh+"_"+u.key : u.key+"_"+myPh;
+                    db.ref('messages/'+chatId).limitToLast(1).on('child_added', mSnap => {
+                        const m = mSnap.val();
+                        if(m.sender !== myPh && m.time > (Date.now() - 5000)) {
+                            NOTIF_SOUND.play().catch(() => {});
+                            if(Notification.permission === "granted") new Notification("New Message: " + u.val().name, { body: m.msg });
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    function syncBG() { db.ref('appConfig/bgImage').on('value', snap => { if(snap.exists()) document.body.style.backgroundImage = "url('" + snap.val() + "')"; }); }
+    function changeBG() { const url = prompt("පසුබිම් පින්තූරයේ Link එක:"); if(url) db.ref('appConfig/bgImage').set(url.trim()); }
+
+    function openStoryModal() { 
+        editKey = null;
+        document.getElementById('modal-title').innerText = "New Story";
+        document.getElementById('post-btn').innerText = "Post Story";
+        document.getElementById('si').value = "";
+        document.getElementById('sm').classList.remove('hidden'); 
+        history.pushState({v:'m'}, ''); 
+    }
+
+    function editStory(key, oldTxt) {
+        editKey = key;
+        document.getElementById('modal-title').innerText = "Edit Story";
+        document.getElementById('post-btn').innerText = "Update Story";
+        document.getElementById('si').value = oldTxt;
+        document.getElementById('sm').classList.remove('hidden');
+        history.pushState({v:'m'}, '');
+    }
+
+    function closeStoryUI() { document.getElementById('sm').classList.add('hidden'); }
 
     function postStory() {
         const text = document.getElementById('si').value;
         if(!text.trim()) return;
-        db.ref('stories').push({ uPh: myPh, user: myNm, text: text, time: Date.now() });
-        document.getElementById('sm').classList.add('hidden');
-        document.getElementById('si').value = "";
+        if(editKey) {
+            db.ref('stories/'+editKey).update({ text: text });
+        } else {
+            db.ref('stories').push({ uPh: myPh, user: myNm, text: text, time: Date.now() });
+        }
+        history.back();
     }
 
     function loadStories() {
@@ -137,29 +181,27 @@
             const feed = document.getElementById('feed'); feed.innerHTML = "";
             snap.forEach(x => {
                 const s = x.val(); const key = x.key;
-                let rawText = s.text; let displayTxt = rawText; let seeMoreBtn = "";
-
+                let rawText = s.text, displayTxt = rawText, seeMoreBtn = "";
                 if (rawText.length > 100) {
                     displayTxt = rawText.substring(0, 100) + "...";
                     seeMoreBtn = `<span class="see-more" onclick="this.parentElement.innerHTML=formatText(decodeURIComponent('${encodeURIComponent(rawText)}'))">See More</span>`;
                 }
-
                 const lCount = s.likes ? Object.keys(s.likes).length : 0;
                 const cCount = s.comments ? Object.keys(s.comments).length : 0;
                 const iLiked = s.likes && s.likes[myPh] ? "liked" : "";
+                
+                const canManage = (s.uPh === myPh || myPh === ADMIN_PH);
 
-                feed.insertAdjacentHTML('afterbegin', `
-                    <div class="card">
-                        ${s.uPh === myPh || myPh === ADMIN_PH ? `<span style="float:right;color:#ff4757;cursor:pointer;" onclick="deleteStory('${key}')">🗑️</span>` : ''}
-                        <b style="color:#a29bfe; font-size:16px;">${s.user}</b>
-                        <div class="story-text">${formatText(displayTxt)}${seeMoreBtn}</div>
-                        <div class="action-bar">
-                            <div class="act-btn ${iLiked}" onclick="toggleLike('${key}')">❤️ ${lCount}</div>
-                            <div class="act-btn" onclick="addComment('${key}')">💬 ${cCount}</div>
-                        </div>
-                        <div id="cmts-${key}" style="font-size:12px; margin-top:10px; color:#ddd;"></div>
-                    </div>
-                `);
+                feed.insertAdjacentHTML('afterbegin', `<div class="card">
+                    ${canManage ? `<div style="position:absolute; right:15px; top:15px; display:flex; gap:10px;">
+                        <span style="color:#3498db; cursor:pointer;" onclick="editStory('${key}', decodeURIComponent('${encodeURIComponent(rawText)}'))">✏️</span>
+                        <span style="color:#ff4757; cursor:pointer;" onclick="deleteStory('${key}')">🗑️</span>
+                    </div>` : ''}
+                    <b style="color:#a29bfe; font-size:16px;">${s.user}</b>
+                    <div class="story-text">${formatText(displayTxt)}${seeMoreBtn}</div>
+                    <div class="action-bar"><div class="act-btn ${iLiked}" onclick="toggleLike('${key}')">❤️ ${lCount}</div><div class="act-btn" onclick="addComment('${key}')">💬 ${cCount}</div></div>
+                    <div id="cmts-${key}" style="font-size:12px; margin-top:10px; color:#ddd;"></div>
+                </div>`);
                 loadComments(key);
             });
         });
@@ -168,12 +210,11 @@
     function toggleLike(sid) { const ref = db.ref(`stories/${sid}/likes/${myPh}`); ref.once('value', snap => { if(snap.exists()) ref.remove(); else ref.set(true); }); }
     function addComment(key) { const c = prompt("Comment:"); if(c) db.ref('stories/'+key+'/comments').push({user: myNm, msg: c}); }
     function loadComments(key) {
-        db.ref('stories/'+key+'/comments').limitToLast(2).on('value', snap => {
+        db.ref('stories/'+key+'/comments').limitToLast(5).on('value', snap => {
             const div = document.getElementById('cmts-'+key); div.innerHTML = "";
-            snap.forEach(c => { div.innerHTML += `<div style="margin-top:5px;"><b>${c.val().user}:</b> ${c.val().msg}</div>`; });
+            snap.forEach(c => { div.innerHTML += `<div style="margin-top:5px;"><b>${c.val().user}:</b> ${formatText(c.val().msg)}</div>`; });
         });
     }
-
     function deleteStory(key) { if(confirm("Delete story?")) db.ref('stories/'+key).remove(); }
 
     function loadUsers() {
@@ -194,17 +235,19 @@
     function openChat(ph, name) {
         activeChatPh = ph; document.getElementById('chat-name').innerText = name;
         document.getElementById('chat-window').classList.remove('hidden');
+        history.pushState({v:'c'}, '');
         const chatId = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
         db.ref('messages/'+chatId).on('value', snap => {
             const mc = document.getElementById('msg-container'); mc.innerHTML = "";
             snap.forEach(m => {
                 const side = m.val().sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:rgba(255,255,255,0.2);';
-                mc.innerHTML += `<div style="${side} max-width:75%; padding:10px; border-radius:15px; margin:5px; backdrop-filter:blur(5px);">${m.val().msg}</div>`;
+                mc.innerHTML += `<div style="${side} max-width:75%; padding:10px; border-radius:15px; margin:5px; backdrop-filter:blur(5px);">${formatText(m.val().msg)}</div>`;
             });
             mc.scrollTop = mc.scrollHeight;
         });
     }
 
+    function closeChatUI() { document.getElementById('chat-window').classList.add('hidden'); }
     function sendMsg() {
         const msg = document.getElementById('msg-input').value; if(!msg.trim()) return;
         const chatId = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
@@ -212,7 +255,6 @@
         document.getElementById('msg-input').value = "";
     }
 
-    function closeChat() { document.getElementById('chat-window').classList.add('hidden'); }
     function logout() { localStorage.clear(); location.reload(); }
     function pg(id, el) { 
         document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
@@ -224,7 +266,7 @@
 
     function authMe() {
         const p = document.getElementById('ap').value, s = document.getElementById('as').value;
-        if(p === ADMIN_PH && s === ADMIN_PASS) { localStorage.setItem("ph",p); localStorage.setItem("nm","Admin"); localStorage.setItem("pc","https://cdn-icons-png.flaticon.com/512/149/149071.png"); location.reload(); return; }
+        if(p === ADMIN_PH && s === ADMIN_PASS) { localStorage.setItem("ph",p); localStorage.setItem("nm","Admin"); localStorage.setItem("pc",""); location.reload(); return; }
         db.ref('users/'+p).once('value', v => {
             if(v.exists() && v.val().pass == s) { localStorage.setItem("ph",p); localStorage.setItem("nm",v.val().name); localStorage.setItem("pc",v.val().pfp || ""); location.reload(); }
             else if(!v.exists() && !document.getElementById('ud').classList.contains('hidden')) {

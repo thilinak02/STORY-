@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORY - Like & Comment Edition</title>
+    <title>STORY - Full Functional</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -26,11 +26,10 @@
         .pfp { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 2px solid white; }
         .s-img { width: 100%; border-radius: 12px; margin-top: 10px; }
         
-        /* Like & Comment Styles */
         .actions { display: flex; gap: 15px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
         .act-btn { cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; }
         .cmnt-box { margin-top: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; font-size: 13px; }
-        .sm-btn { color: #7360f2; cursor: pointer; font-weight: bold; }
+        .sm-btn { color: #7360f2; cursor: pointer; font-weight: bold; margin-left: 5px; }
 
         .nav-bar { background: rgba(0,0,0,0.6); backdrop-filter: blur(20px); display: flex; height: 65px; border-top: 1px solid rgba(255,255,255,0.1); }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: #ddd; cursor: pointer; }
@@ -44,7 +43,7 @@
 <div class="overlay"></div>
 
 <div class="content-wrap">
-    <div id="auth-page">
+    <div id="auth-page" class="hidden">
         <header>STORY Messenger</header>
         <div style="padding: 25px;">
             <h2 id="at">Login</h2>
@@ -70,7 +69,8 @@
         </header>
 
         <div id="p-chats" class="page">
-            <div style="padding:15px;"><input id="sq" placeholder="Search friends..." oninput="searchUser()"></div>
+            <div style="padding:15px;"><input id="sq" placeholder="Search friends by name..." oninput="searchUser()"></div>
+            <div id="search-results"></div>
             <div id="reqs"></div>
             <div id="cons"></div>
         </div>
@@ -104,7 +104,10 @@
     let myNm = localStorage.getItem("nm") || "";
     let myPc = localStorage.getItem("pc") || "";
 
-    window.onload = function() { if(myPh) start(); else document.getElementById('auth-page').classList.remove('hidden'); };
+    window.onload = function() { 
+        if(myPh) start(); 
+        else document.getElementById('auth-page').classList.remove('hidden'); 
+    };
 
     function start() {
         document.getElementById('auth-page').classList.add('hidden');
@@ -156,9 +159,8 @@
                             <img src="${d.pfp||'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="pfp">
                             <b>${d.user}</b>
                         </div>
-                        <p id="txt-${x.key}">${displayTxt} ${isLong ? `<span class="sm-btn" onclick="showMore('${x.key}', \`${d.text.replace(/'/g, "\\'")}\`)">See More</span>` : ''}</p>
+                        <p id="txt-${x.key}">${displayTxt} ${isLong ? `<span class="sm-btn" onclick="showFull('${x.key}', \`${d.text.replace(/`/g, '\\`').replace(/\n/g, ' ')}\`)">See More</span>` : ''}</p>
                         ${d.img ? `<img src="${d.img}" class="s-img">` : ''}
-                        
                         <div class="actions">
                             <div class="act-btn" onclick="like('${x.key}')">❤️ <span>${likes}</span></div>
                             <div class="act-btn" onclick="addCmnt('${x.key}')">💬 Comment</div>
@@ -168,17 +170,51 @@
                 `);
             });
         });
+
+        db.ref('contacts/'+myPh).on('value', s => {
+            const c = document.getElementById('cons'); c.innerHTML = "<h3>My Friends</h3>";
+            s.forEach(x => {
+                c.innerHTML += `<div class="card">👤 ${x.val().nm}</div>`;
+            });
+        });
+
+        db.ref('requests/'+myPh).on('value', s => {
+            const r = document.getElementById('reqs'); r.innerHTML = "";
+            s.forEach(x => {
+                r.innerHTML += `<div class="card">${x.val().nm} sent a request <button onclick="acc('${x.val().fr}','${x.val().nm}','${x.val().pc}')">Accept</button></div>`;
+            });
+        });
     }
 
-    function showMore(id, full) { document.getElementById('txt-'+id).innerText = full; }
+    function showFull(id, full) { document.getElementById('txt-'+id).innerText = full; }
 
-    function like(id) {
-        db.ref(`stories/${id}/likes/${myPh}`).set(true);
-    }
+    function like(id) { db.ref(`stories/${id}/likes/${myPh}`).set(true); }
 
     function addCmnt(id) {
         const t = prompt("Enter your comment:");
         if(t) db.ref(`stories/${id}/comments`).push({u: myNm, t: t});
+    }
+
+    function searchUser() {
+        const q = document.getElementById('sq').value.toLowerCase();
+        const resDiv = document.getElementById('search-results');
+        if(!q) { resDiv.innerHTML = ""; return; }
+        db.ref('users').once('value', s => {
+            resDiv.innerHTML = "<h3>Search Results</h3>";
+            s.forEach(u => {
+                if(u.key !== myPh && u.val().name.toLowerCase().includes(q)) {
+                    resDiv.innerHTML += `<div class="card" style="display:flex;align-items:center;"><span style="flex:1;">${u.val().name}</span><button onclick="inv('${u.key}','${u.val().name}','${u.val().pfp||''}')" style="width:auto;padding:5px;">Add Friend</button></div>`;
+                }
+            });
+        });
+    }
+
+    function inv(p, name, pfp) { db.ref(`requests/${p}/${myPh}`).set({nm:myNm, fr:myPh, pc:myPc}); alert("Request Sent!"); }
+
+    function acc(p, n, pc) {
+        db.ref(`contacts/${myPh}/${p}`).set({ph:p, nm:n, pc:pc});
+        db.ref(`contacts/${p}/${myPh}`).set({ph:myPh, nm:myNm, pc:myPc});
+        db.ref(`requests/${myPh}/${p}`).remove();
     }
 
     async function post() {

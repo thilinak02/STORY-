@@ -22,6 +22,7 @@
         input, button, textarea { border-radius: 20px; border: 1px solid #444; padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; background: #222; color: white; outline: none; }
         #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
         .fr-btn { width: auto; padding: 4px 10px; font-size: 10px; background: #3498db; border: none; border-radius: 10px; cursor: pointer; color: white; }
+        .p-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #333; }
     </style>
 </head>
 <body>
@@ -30,6 +31,10 @@
     <div id="main-app" class="hidden" style="display:flex; flex-direction:column; height:100%;">
         <header>
             <div style="display:flex; align-items:center; gap:8px;">
+                <label for="p-pic-up" style="cursor:pointer;">
+                    <img id="my-p-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="p-img" style="border:1px solid white; width:30px; height:30px;">
+                </label>
+                <input type="file" id="p-pic-up" class="hidden" accept="image/*">
                 <b id="myn">Story Pro</b>
                 <div id="adm-area" class="hidden" style="display:flex; gap:5px;">
                     <label for="bg-upload" style="background:red; font-size:9px; padding:3px 6px; border-radius:5px; cursor:pointer;">BG</label>
@@ -40,8 +45,18 @@
             <button onclick="logout()" style="width:auto; padding:4px 8px; background:none; border:1px solid #fff; font-size:10px;">Logout</button>
         </header>
         <div id="notice-bar"></div>
-        <div id="p-chats" class="page"><h4 style="margin:15px;">Friends Chat</h4><div id="cons"></div></div>
+        
+        <div id="p-chats" class="page">
+            <div style="padding: 10px;">
+                <input type="text" id="search-user" placeholder="Search friends by name..." onkeyup="searchUsers()">
+                <div id="search-results"></div>
+            </div>
+            <h4 style="margin:15px;">Messages</h4>
+            <div id="cons"></div>
+        </div>
+
         <div id="p-stories" class="page hidden"><h4 style="margin:15px;">Feed</h4><div id="feed"></div></div>
+
         <div class="nav-bar">
             <div class="nav-item active" onclick="pg('p-chats',this)">💬 Chats</div>
             <div class="nav-item" onclick="pg('p-stories',this)">📖 Stories</div>
@@ -135,8 +150,44 @@
         document.getElementById('main-app').classList.remove('hidden');
         document.getElementById('myn').innerText = "Hi, " + myNm;
         if(myPh === ADMIN_PH) document.getElementById('adm-area').classList.remove('hidden');
+        
+        // Load My Profile Pic
+        db.ref('users/'+myPh+'/pic').on('value', snap => {
+            if(snap.exists()) document.getElementById('my-p-img').src = snap.val();
+        });
+
         loadStories(); loadFriends();
         if(Notification.permission !== "granted") Notification.requestPermission();
+    }
+
+    // Profile Pic Upload
+    document.getElementById('p-pic-up').addEventListener('change', function(e) {
+        const f = e.target.files[0];
+        if(f){
+            const r = new FileReader();
+            r.onload=(ev)=>{
+                db.ref('users/'+myPh).update({pic: ev.target.result});
+                alert("Profile Picture Updated!");
+            };
+            r.readAsDataURL(f);
+        }
+    });
+
+    function searchUsers() {
+        const q = document.getElementById('search-user').value.toLowerCase();
+        const res = document.getElementById('search-results');
+        if(q.length < 2) { res.innerHTML = ""; return; }
+        db.ref('users').once('value', snap => {
+            res.innerHTML = "";
+            snap.forEach(u => {
+                if(u.val().name.toLowerCase().includes(q) && u.key !== myPh) {
+                    res.insertAdjacentHTML('beforeend', `<div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>${u.val().name}</span>
+                        <button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button>
+                    </div>`);
+                }
+            });
+        });
     }
 
     function loadStories() {
@@ -145,7 +196,7 @@
             snap.forEach(x => {
                 const s = x.val(); const can = (s.uPh === myPh || myPh === ADMIN_PH);
                 feed.insertAdjacentHTML('afterbegin', `<div class="card">
-                    <div style="display:flex; justify-content:space-between;"><b>${s.user}</b>${s.uPh!==myPh?`<button class="fr-btn" onclick="sendReq('${s.uPh}')">➕ Friend</button>`:''}</div>
+                    <div style="display:flex; justify-content:space-between;"><b>${s.user}</b>${s.uPh!==myPh?`<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>`:''}</div>
                     <div style="margin:10px 0;">${formatText(s.text)}</div>
                     ${s.img?`<img src="${s.img}" class="story-img">`:''}
                     ${can ? `<div style="text-align:right; margin-top:5px;"><span onclick="editStory('${x.key}','${s.text}')" style="color:#3498db; cursor:pointer;">✏️</span> <span onclick="delStory('${x.key}')" style="color:#ff4757; cursor:pointer; margin-left:10px;">🗑️</span></div>`:''}
@@ -162,17 +213,31 @@
 
     function editStory(k, t) { editKey = k; document.getElementById('m-title').innerText = "Edit"; document.getElementById('si').value = t; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); history.pushState({v:'m'}, ''); }
     function delStory(k) { if(confirm("Delete?")) db.ref('stories/'+k).remove(); }
-    function sendReq(to) { db.ref('friends/'+to+'/'+myPh).set({status:'pending', name:myNm}); alert("Sent!"); }
+    
+    function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myPh).set({status:'pending', name:myNm}); alert("Sent to " + toNm); }
+    
     function loadFriends() {
         db.ref('friends/'+myPh).on('value', snap => {
             const c = document.getElementById('cons'); c.innerHTML = "";
             snap.forEach(f => {
-                if(f.val().status==='accepted') c.innerHTML += `<div class="card" onclick="openChat('${f.key}','${f.val().name}')">👤 ${f.val().name}</div>`;
-                else if(f.val().status==='pending') c.innerHTML += `<div class="card">Req: ${f.val().name} <button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${f.val().name}')">Accept</button></div>`;
+                if(f.val().status==='accepted') {
+                    db.ref('users/'+f.key+'/pic').once('value', p => {
+                        const img = p.exists() ? p.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                        c.insertAdjacentHTML('beforeend', `<div class="card" onclick="openChat('${f.key}','${f.val().name}')" style="display:flex; align-items:center; gap:12px;">
+                            <img src="${img}" class="p-img">
+                            <div><b>${f.val().name}</b><div style="font-size:10px; color:gray;">Tap to chat</div></div>
+                        </div>`);
+                    });
+                }
+                else if(f.val().status==='pending') {
+                    c.insertAdjacentHTML('afterbegin', `<div class="card">Req: ${f.val().name} <button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${f.val().name}')">Accept</button></div>`);
+                }
             });
         });
     }
+
     function acc(ph, nm) { db.ref('friends/'+myPh+'/'+ph).set({status:'accepted', name:nm}); db.ref('friends/'+ph+'/'+myPh).set({status:'accepted', name:myNm}); }
+    
     function openChat(ph, name) {
         activeChatPh = ph; document.getElementById('chat-name').innerText = name;
         document.getElementById('chat-window').classList.remove('hidden'); history.pushState({v:'c'}, '');
@@ -186,17 +251,26 @@
             mc.scrollTop = mc.scrollHeight;
         });
     }
+
     function sendMsg() {
         const msg = document.getElementById('msg-input').value; if(!msg.trim()) return;
         const cid = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
         db.ref('messages/'+cid).push({ sender: myPh, msg: msg, time: Date.now() });
         document.getElementById('msg-input').value = "";
     }
+
     function setNotice() { const m = prompt("Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
     function logout() { localStorage.clear(); location.reload(); }
     function tgl() { document.getElementById('ud').classList.remove('hidden'); }
-    function pg(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active'); if(id==='p-chats') activeChatPh=""; }
+    function pg(id, el) { 
+        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); 
+        document.getElementById(id).classList.remove('hidden'); 
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); 
+        el.classList.add('active'); 
+        if(id==='p-chats') { activeChatPh=""; document.getElementById('search-user').value=""; document.getElementById('search-results').innerHTML=""; }
+    }
     function openStoryModal() { editKey = null; storyImgData = ""; document.getElementById('si').value = ""; document.getElementById('img-field').classList.remove('hidden'); document.getElementById('sm').classList.remove('hidden'); history.pushState({v:'m'}, ''); }
+    
     document.getElementById('bg-upload').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); } });
     document.getElementById('img-input').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>storyImgData=ev.target.result; r.readAsDataURL(f); } });
 </script>

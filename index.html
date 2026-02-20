@@ -8,12 +8,14 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.75); }
-        body { font-family: sans-serif; margin: 0; background: #000 no-repeat center center fixed; background-size: cover; color: white; height: 100vh; overflow: hidden; transition: 0.5s; }
+        /* Scroll issue එක විසඳීමට overflow: hidden; ඉවත් කළා */
+        body { font-family: sans-serif; margin: 0; background: #000 no-repeat center center fixed; background-size: cover; color: white; height: 100vh; transition: 0.5s; }
         .content-wrap { height: 100vh; display: flex; flex-direction: column; }
         .hidden { display: none !important; }
-        header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+        header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; flex-shrink: 0; }
         #notice-bar { background: #f1c40f; color: #000; padding: 10px; font-size: 13px; font-weight: bold; text-align: center; border-bottom: 2px solid #d35400; display: none; }
-        .page { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+        /* Page එක ඇතුළේ scroll එක නිවැරදි කළා */
+        .page { flex: 1; overflow-y: auto; padding-bottom: 90px; -webkit-overflow-scrolling: touch; }
         .card { background: var(--glass); backdrop-filter: blur(10px); padding: 15px; margin: 10px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative; }
         .story-img { width: 100%; border-radius: 10px; margin-top: 10px; display: block; }
         .nav-bar { background: #000; display: flex; height: 70px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #333; z-index: 100; }
@@ -23,6 +25,7 @@
         #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
         .fr-btn { width: auto; padding: 4px 10px; font-size: 10px; background: #3498db; border: none; border-radius: 10px; cursor: pointer; color: white; }
         .p-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #333; }
+        .see-more { color: #3498db; cursor: pointer; font-weight: bold; margin-left: 5px; }
     </style>
 </head>
 <body>
@@ -64,7 +67,7 @@
         </div>
     </div>
 
-    <div id="auth-page" class="hidden" style="padding:40px;">
+    <div id="auth-page" class="hidden" style="padding:40px; overflow-y: auto;">
         <div class="card">
             <h2 style="text-align:center;">Login</h2>
             <input id="ap" type="tel" placeholder="Phone Number">
@@ -76,7 +79,7 @@
     </div>
 </div>
 
-<div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; padding:20px; box-sizing:border-box;">
+<div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; padding:20px; box-sizing:border-box; overflow-y: auto;">
     <h3 id="m-title">New Post</h3>
     <textarea id="si" placeholder="Write... (**bold**)" rows="6"></textarea>
     <div id="img-field"><input type="file" id="img-input" accept="image/*"></div>
@@ -106,7 +109,29 @@
     window.onload = () => { syncApp(); if(myPh) { start(); listenMsgs(); } else { document.getElementById('auth-page').classList.remove('hidden'); } };
     window.onpopstate = () => { document.getElementById('sm').classList.add('hidden'); document.getElementById('chat-window').classList.add('hidden'); };
 
-    function formatText(t) { return t ? t.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') : ""; }
+    // Bold text ගැටලුව මෙහිදී නිවැරදි කළා
+    function formatText(t) { 
+        if(!t) return "";
+        return t.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); 
+    }
+
+    // See More function එක
+    function truncateText(text, limit, key) {
+        const words = text.split(' ');
+        if (words.length > limit) {
+            return words.slice(0, limit).join(' ') + `... <span class="see-more" onclick="showFullText('${key}')">See More</span>`;
+        }
+        return text;
+    }
+
+    let rawStories = {}; // පූර්ණ පෝස්ට් තාවකාලිකව තබා ගැනීමට
+
+    function showFullText(key) {
+        const el = document.getElementById('story-text-' + key);
+        if(el && rawStories[key]) {
+            el.innerHTML = formatText(rawStories[key]);
+        }
+    }
 
     function syncApp() {
         db.ref('appConfig/bgImage').on('value', snap => { if(snap.exists()) document.body.style.backgroundImage = `url('${snap.val()}')`; });
@@ -151,7 +176,6 @@
         document.getElementById('myn').innerText = "Hi, " + myNm;
         if(myPh === ADMIN_PH) document.getElementById('adm-area').classList.remove('hidden');
         
-        // Load My Profile Pic
         db.ref('users/'+myPh+'/pic').on('value', snap => {
             if(snap.exists()) document.getElementById('my-p-img').src = snap.val();
         });
@@ -160,7 +184,6 @@
         if(Notification.permission !== "granted") Notification.requestPermission();
     }
 
-    // Profile Pic Upload
     document.getElementById('p-pic-up').addEventListener('change', function(e) {
         const f = e.target.files[0];
         if(f){
@@ -195,11 +218,15 @@
             const feed = document.getElementById('feed'); feed.innerHTML = "";
             snap.forEach(x => {
                 const s = x.val(); const can = (s.uPh === myPh || myPh === ADMIN_PH);
+                rawStories[x.key] = s.text; // Store original text
+                
+                const displayTxt = truncateText(s.text, 100, x.key);
+
                 feed.insertAdjacentHTML('afterbegin', `<div class="card">
                     <div style="display:flex; justify-content:space-between;"><b>${s.user}</b>${s.uPh!==myPh?`<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>`:''}</div>
-                    <div style="margin:10px 0;">${formatText(s.text)}</div>
+                    <div id="story-text-${x.key}" style="margin:10px 0; white-space: pre-wrap;">${formatText(displayTxt)}</div>
                     ${s.img?`<img src="${s.img}" class="story-img">`:''}
-                    ${can ? `<div style="text-align:right; margin-top:5px;"><span onclick="editStory('${x.key}','${s.text}')" style="color:#3498db; cursor:pointer;">✏️</span> <span onclick="delStory('${x.key}')" style="color:#ff4757; cursor:pointer; margin-left:10px;">🗑️</span></div>`:''}
+                    ${can ? `<div style="text-align:right; margin-top:5px;"><span onclick="editStory('${x.key}','${s.text.replace(/'/g, "\\'")}')" style="color:#3498db; cursor:pointer;">✏️</span> <span onclick="delStory('${x.key}')" style="color:#ff4757; cursor:pointer; margin-left:10px;">🗑️</span></div>`:''}
                 </div>`);
             });
         });
@@ -207,8 +234,18 @@
 
     function postStory() {
         const txt = document.getElementById('si').value;
-        if(editKey) db.ref('stories/'+editKey).update({ text: txt }).then(() => history.back());
-        else db.ref('stories').push({ uPh:myPh, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => history.back());
+        if(editKey) {
+            db.ref('stories/'+editKey).update({ text: txt }).then(() => {
+                editKey = null;
+                document.getElementById('sm').classList.add('hidden');
+                history.back();
+            });
+        } else {
+            db.ref('stories').push({ uPh:myPh, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => {
+                document.getElementById('sm').classList.add('hidden');
+                history.back();
+            });
+        }
     }
 
     function editStory(k, t) { editKey = k; document.getElementById('m-title').innerText = "Edit"; document.getElementById('si').value = t; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); history.pushState({v:'m'}, ''); }

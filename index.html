@@ -2,7 +2,7 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STORY PRO - Verified Login</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -10,107 +10,114 @@
 
     <style>
         :root { --viber: #7360f2; --glass: rgba(255, 255, 255, 0.1); }
-        body { font-family: sans-serif; margin: 0; background: #000; color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #000; color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
         .login-card { background: var(--glass); backdrop-filter: blur(15px); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); width: 90%; max-width: 360px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #111; color: white; box-sizing: border-box; outline: none; }
+        h2 { margin-bottom: 20px; font-size: 24px; letter-spacing: 2px; }
+        .welcome-text { color: var(--viber); font-weight: bold; margin-bottom: 15px; display: block; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 12px; border: 1px solid #333; background: rgba(0,0,0,0.5); color: white; outline: none; box-sizing: border-box; }
         button { width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--viber); color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .toggle-text { font-size: 12px; color: #aaa; margin-top: 15px; cursor: pointer; display: block; text-decoration: underline; }
-        .hidden { display: none !important; }
-        .info { font-size: 11px; color: #ffcc00; margin-bottom: 10px; }
+        .toggle-text { font-size: 12px; color: #aaa; margin-top: 15px; cursor: pointer; display: block; }
+        .hidden { display: none; }
+        .info-msg { font-size: 11px; color: #ffcc00; margin-bottom: 10px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
 <div class="login-card">
     <h2>STORY PRO</h2>
-    <span style="color:var(--viber); font-weight:bold;">WELCOME</span>
+    <span class="welcome-text">WELCOME</span>
 
     <div id="auth-form">
-        <input id="user-id" type="text" placeholder="Email (User) / Phone (Admin)">
+        <input id="user-id" type="text" placeholder="Email හෝ Phone Number">
         <input id="user-pw" type="password" placeholder="Password">
         <button onclick="handleLogin()">Login</button>
-        <span class="toggle-text" onclick="toggleForm()">Create New Account (Sign Up)</span>
+        <span class="toggle-text" onclick="toggleSignup()">අලුත් ගිණුමක් සාදන්න (Sign Up)</span>
     </div>
 
     <div id="signup-form" class="hidden">
-        <p class="info">ගිණුම සෑදූ පසු Gmail එකට එන Link එක ක්ලික් කරන්න.</p>
-        <input id="reg-email" type="email" placeholder="Enter Your Gmail">
-        <input id="reg-pw" type="password" placeholder="New Password (min 6 chars)">
-        <button onclick="handleSignup()" style="background: #444;">Send Verification Link</button>
-        <span class="toggle-text" onclick="toggleForm()">Back to Login</span>
+        <p class="info-msg">ගිණුම සෑදූ පසු ඔබගේ Gmail එකට ලැබෙන Link එක ක්ලික් කර එය තහවුරු කරන්න.</p>
+        <input id="reg-email" type="email" placeholder="ඔබගේ Gmail ලිපිනය">
+        <input id="reg-pw" type="password" placeholder="අලුත් Password එකක්">
+        <button onclick="handleSignup()" style="background: #444;">Verification Link එක යවන්න</button>
+        <span class="toggle-text" onclick="toggleSignup()">නැවත Login පිටුවට</span>
     </div>
 </div>
 
 <script>
-    // --- මෙතනට ඔබගේ නිවැරදි Firebase Config එක ඇතුළත් කරන්න ---
+    // ඔබේ අලුත් Firebase Config එක මෙන්න
     const firebaseConfig = {
-        apiKey: "AIzaSy...", 
-        authDomain: "story-ceca0.firebaseapp.com",
-        databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com",
-        projectId: "story-ceca0",
-        storageBucket: "story-ceca0.appspot.com",
-        messagingSenderId: "...",
-        appId: "..."
+      apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
+      authDomain: "story-ceca0.firebaseapp.com",
+      databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com",
+      projectId: "story-ceca0",
+      storageBucket: "story-ceca0.firebasestorage.app",
+      messagingSenderId: "820075788039",
+      appId: "1:820075788039:web:421fd811a4b4a3249a77a2"
     };
 
-    // Firebase Initialize
+    // Firebase Initialize කිරීම
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
     const auth = firebase.auth();
     const db = firebase.database();
 
+    // Admin දත්ත
     const ADMIN_PH = "0712729189";
     const ADMIN_PW = "Thilinak9411@";
 
-    // ලොගින් ක්‍රියාවලිය
+    // 1. ලොගින් වීම
     function handleLogin() {
         const id = document.getElementById('user-id').value.trim();
         const pw = document.getElementById('user-pw').value.trim();
 
-        if (!id || !pw) { alert("Please fill all fields!"); return; }
+        if (!id || !pw) return alert("කරුණාකර තොරතුරු ඇතුළත් කරන්න.");
 
-        // Admin Login
+        // Admin පරීක්ෂාව
         if (id === ADMIN_PH && pw === ADMIN_PW) {
             localStorage.setItem("userRole", "admin");
             alert("Welcome Admin!");
-            location.href = "index.html"; // ඔබේ ප්‍රධාන පිටුවේ ලින්ක් එක
+            window.location.href = "index.html"; // සාර්ථක නම් යන පිටුව
             return;
         }
 
-        // User Login
+        // සාමාන්‍ය User ලොගින්
         auth.signInWithEmailAndPassword(id, pw)
             .then((userCredential) => {
                 if (userCredential.user.emailVerified) {
                     localStorage.setItem("userRole", "user");
-                    location.href = "index.html";
+                    window.location.href = "index.html";
                 } else {
-                    alert("Please verify your email! Check your Gmail inbox.");
+                    alert("කරුණාකර ඔබගේ Gmail එක පරීක්ෂා කර ලැබුණු Link එක ක්ලික් කරන්න.");
                     auth.signOut();
                 }
             })
-            .catch((error) => { alert("Error: " + error.message); });
+            .catch((error) => {
+                alert("වැරදියි: " + error.message);
+            });
     }
 
-    // ගිණුම සෑදීම
+    // 2. අලුත් ගිණුමක් සෑදීම
     function handleSignup() {
         const email = document.getElementById('reg-email').value.trim();
         const pw = document.getElementById('reg-pw').value.trim();
 
-        if (!email || pw.length < 6) { alert("Valid email and 6+ char password required!"); return; }
+        if (!email || pw.length < 6) return alert("නිවැරදි Gmail ලිපිනයක් සහ අකුරු 6කට වැඩි Password එකක් ඇතුළත් කරන්න.");
 
         auth.createUserWithEmailAndPassword(email, pw)
             .then((userCredential) => {
                 userCredential.user.sendEmailVerification().then(() => {
-                    alert("Verification link sent to: " + email);
+                    alert("තහවුරු කිරීමේ Link එක ඔබගේ Gmail එකට යැව්වා. එය ක්ලික් කර නැවත ලොග් වන්න.");
                     auth.signOut();
-                    toggleForm();
+                    toggleSignup();
                 });
             })
-            .catch((error) => { alert("Signup Error: " + error.message); });
+            .catch((error) => {
+                alert("ගිණුම සෑදිය නොහැක: " + error.message);
+            });
     }
 
-    function toggleForm() {
+    function toggleSignup() {
         document.getElementById('auth-form').classList.toggle('hidden');
         document.getElementById('signup-form').classList.toggle('hidden');
     }

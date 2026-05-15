@@ -3,266 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>STORY PRO - Master Edition</title>
+    <title>STORY PRO - Verified Login</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <style>
-        :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.85); }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #000 no-repeat center center fixed; background-size: cover; color: white; min-height: 100vh; overflow-x: hidden; }
-        .content-wrap { min-height: 100vh; display: flex; flex-direction: column; }
-        .hidden { display: none !important; }
-        
-        header { background: var(--viber); padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; position: sticky; top: 0; }
-        #notice-bar { background: #f1c40f; color: #000; padding: 10px; font-size: 13px; font-weight: bold; text-align: center; display: none; }
-        
-        .page { flex: 1; padding-bottom: 90px; }
-        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 15px; margin: 12px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); }
-        
-        .chat-item { display: flex; align-items: center; gap: 15px; padding: 12px; margin: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 15px; cursor: pointer; transition: 0.2s; }
-        .chat-item:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
-        
-        .p-img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #333; }
-        .nav-bar { background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); display: flex; height: 70px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #222; z-index: 100; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #777; cursor: pointer; }
-        .nav-item.active { color: white; font-weight: bold; }
-        
-        input, button, textarea { border-radius: 15px; border: 1px solid #333; padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; background: #111; color: white; outline: none; }
-        .primary-btn { background: var(--viber); border: none; font-weight: bold; cursor: pointer; }
-        .google-btn { background: white; color: black; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; cursor: pointer; padding: 12px; border-radius: 25px; }
-        
-        #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
-        .msg-bubble { padding: 10px 15px; border-radius: 18px; margin: 5px; max-width: 80%; font-size: 15px; }
+        :root { --viber: #7360f2; --glass: rgba(255, 255, 255, 0.1); }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #000; color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .login-card { background: var(--glass); backdrop-filter: blur(15px); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); width: 90%; max-width: 360px; text-align: center; }
+        h2 { margin-bottom: 20px; font-size: 24px; letter-spacing: 2px; }
+        .welcome-text { color: var(--viber); font-weight: bold; margin-bottom: 15px; display: block; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 12px; border: 1px solid #333; background: rgba(0,0,0,0.5); color: white; outline: none; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--viber); color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .toggle-text { font-size: 12px; color: #aaa; margin-top: 15px; cursor: pointer; display: block; }
+        .hidden { display: none; }
+        .info-msg { font-size: 11px; color: #ffcc00; margin-top: 10px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
-<div class="content-wrap">
-    <div id="auth-page" class="page" style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;">
-        <div class="card" style="width: 100%; max-width: 350px; text-align: center;">
-            <h2 style="margin-bottom: 20px;">STORY PRO</h2>
-            
-            <div id="login-box" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 15px; border: 1px solid #333;">
-                <p id="auth-title" style="font-size: 14px; color: #7360f2; margin-bottom: 10px; font-weight: bold;">WELCOME</p>
-                <input id="auth-email" type="email" placeholder="Email or Phone">
-                <input id="auth-pw" type="password" placeholder="Password">
-                <button onclick="handleAuth()" class="primary-btn">Login / Sign Up</button>
-            </div>
+<div class="login-card">
+    <h2>STORY PRO</h2>
+    <span class="welcome-text">WELCOME</span>
 
-            <div style="margin: 20px; color: #555; font-size: 12px;">OR</div>
-
-            <button class="google-btn" onclick="loginWithGoogle()">
-                <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" width="20"> Continue with Gmail
-            </button>
-        </div>
+    <div id="auth-form">
+        <input id="user-id" type="text" placeholder="Email (Users) / Phone (Admin)">
+        <input id="user-pw" type="password" placeholder="Password">
+        <button onclick="handleLogin()">Login</button>
+        <span class="toggle-text" onclick="toggleSignup()">අලුත් ගිණුමක් සාදන්න (Sign Up)</span>
     </div>
 
-    <div id="main-app" class="hidden">
-        <header>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <img id="my-p-img" src="" class="p-img" style="width:30px; height:30px;">
-                <b id="myn">User</b>
-                <div id="adm-area" class="hidden" style="display:flex; gap:5px;">
-                    <label for="bg-upload" style="background:red; font-size:9px; padding:4px; border-radius:5px; cursor:pointer;">BG</label>
-                    <button onclick="setNotice()" style="background:orange; font-size:9px; border:none; color:black; padding:4px; border-radius:5px;">NOTICE</button>
-                    <input type="file" id="bg-upload" class="hidden">
-                </div>
-            </div>
-            <button onclick="logout()" style="width:auto; padding:5px 10px; background:none; border:1px solid #fff; font-size:10px;">Logout</button>
-        </header>
-
-        <div id="notice-bar"></div>
-
-        <div id="p-chats" class="page">
-            <div style="padding: 10px;">
-                <input type="text" id="search-input" placeholder="🔍 Search friends by name..." onkeyup="searchUsers()">
-                <div id="search-results"></div>
-            </div>
-            <h4 style="margin:15px; color:#777; font-size:12px;">MESSAGES</h4>
-            <div id="cons"></div>
-        </div>
-
-        <div id="p-stories" class="page hidden"><div id="feed"></div></div>
-
-        <nav class="nav-bar">
-            <div class="nav-item active" onclick="pg('p-chats',this)">💬 Chats</div>
-            <div class="nav-item" onclick="pg('p-stories',this)">📖 Feed</div>
-            <div class="nav-item" onclick="openStoryModal()">➕ Post</div>
-        </nav>
-    </div>
-</div>
-
-<div id="chat-window" class="hidden">
-    <header><span onclick="history.back()" style="cursor:pointer; font-size:20px;">←</span> <b id="chat-name">User</b></header>
-    <div id="msg-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column;"></div>
-    <div style="padding:10px; display:flex; gap:5px; background:#111;">
-        <input id="msg-input" placeholder="Type here...">
-        <button onclick="sendMsg()" style="width:auto; background:var(--viber); border:none; padding:0 15px;">Send</button>
+    <div id="signup-form" class="hidden">
+        <p class="info-msg">ගිණුම සෑදූ පසු ඔබගේ Gmail එකට ලැබෙන Link එක ක්ලික් කර එය තහවුරු කරන්න.</p>
+        <input id="reg-email" type="email" placeholder="ඔබගේ Gmail ලිපිනය">
+        <input id="reg-pw" type="password" placeholder="අලුත් Password එකක්">
+        <button onclick="handleSignup()" style="background: #444;">Verification Link එක යවන්න</button>
+        <span class="toggle-text" onclick="toggleSignup()">නැවත Login පිටුවට</span>
     </div>
 </div>
 
 <script>
-// Paste your firebaseConfig here
-const firebaseConfig = { databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com" };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
-const provider = new firebase.auth.GoogleAuthProvider();
+    // Firebase Config (ඔබේ දත්ත ඇතුළත් කරන්න)
+    const firebaseConfig = {
+        databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-const ADMIN_PH = "0712729189", ADMIN_PW = "Thilinak9411@";
-let myPh = "", myNm = "", myPic = "", activeChatPh = "", storyImgData = "";
+    const ADMIN_PH = "0712729189";
+    const ADMIN_PW = "Thilinak9411@";
 
-auth.onAuthStateChanged(user => {
-    if (user) {
-        myPh = user.uid; 
-        myNm = user.displayName || "User"; 
-        myPic = user.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-        
-        db.ref('users/'+myPh).update({name:myNm, pic:myPic, email: user.email || ""});
-        
-        // Admin check
-        if(user.email === "admin@storypro.com" || localStorage.getItem("isAdmin") === "true") {
-             document.getElementById('adm-area').classList.remove('hidden');
+    // 1. ලොගින් වීම
+    function handleLogin() {
+        const id = document.getElementById('user-id').value;
+        const pw = document.getElementById('user-pw').value;
+
+        if (!id || !pw) return alert("තොරතුරු ඇතුළත් කරන්න.");
+
+        // Admin පරීක්ෂාව (Admin හට Email verification අවශ්‍ය නැත)
+        if (id === ADMIN_PH && pw === ADMIN_PW) {
+            localStorage.setItem("userRole", "admin");
+            alert("Welcome Admin!");
+            window.location.href = "main.html"; 
+            return;
         }
-        
-        showApp();
-    } else {
-        document.getElementById('auth-page').classList.remove('hidden');
-        document.getElementById('main-app').classList.add('hidden');
-    }
-});
 
-async function handleAuth() {
-    const email = document.getElementById('auth-email').value;
-    const pw = document.getElementById('auth-pw').value;
-
-    if(!email || !pw) return alert("Email/Phone and Password required!");
-
-    // 1. Check Admin first
-    if(email === ADMIN_PH && pw === ADMIN_PW) {
-        localStorage.setItem("isAdmin", "true");
-        // We use a dummy email for admin auth or you can use your specific method
-        // For simplicity, letting admin bypass with predefined credentials
-        alert("Admin Logged In!");
-        myPh = "ADMIN_ID"; myNm = "Admin"; 
-        myPic = "https://cdn-icons-png.flaticon.com/512/6024/6024190.png";
-        showApp();
-        document.getElementById('adm-area').classList.remove('hidden');
-        return;
+        // සාමාන්‍ය User ලොගින්
+        auth.signInWithEmailAndPassword(id, pw)
+            .then((userCredential) => {
+                const user = userCredential.user;
+                
+                // Email එක Verify කර ඇත්දැයි බැලීම
+                if (user.emailVerified) {
+                    localStorage.setItem("userRole", "user");
+                    window.location.href = "main.html";
+                } else {
+                    alert("කරුණාකර ඔබගේ Gmail එකට ලැබුණු Link එක ක්ලික් කර ගිණුම තහවුරු කරන්න.");
+                    auth.signOut(); // Verify නැත්නම් ආපහු ලොග් අවුට් කරනවා
+                }
+            })
+            .catch((error) => {
+                alert("වැරදියි: " + error.message);
+            });
     }
 
-    // 2. Regular User Email/PW Auth
-    try {
-        // Try Login
-        await auth.signInWithEmailAndPassword(email, pw);
-    } catch (error) {
-        if (error.code === 'auth/user-not-found') {
-            // If user not found, try to Register
-            try {
-                await auth.createUserWithEmailAndPassword(email, pw);
-                alert("Account Created & Logged In!");
-            } catch (regErr) { alert(regErr.message); }
-        } else {
-            alert(error.message);
-        }
+    // 2. ගිණුම සාදා Verification Link එක යැවීම
+    function handleSignup() {
+        const email = document.getElementById('reg-email').value;
+        const pw = document.getElementById('reg-pw').value;
+
+        if (!email.includes("@")) return alert("නිවැරදි Gmail ලිපිනයක් ඇතුළත් කරන්න.");
+
+        auth.createUserWithEmailAndPassword(email, pw)
+            .then((userCredential) => {
+                // Verification Email එක යැවීම
+                userCredential.user.sendEmailVerification().then(() => {
+                    alert("සත්‍යාපන Link එක ඔබගේ Gmail එකට යැව්වා. එය ක්ලික් කර නැවත ලොග් වන්න.");
+                    
+                    // DB එකේ තොරතුරු සටහන් කිරීම
+                    db.ref('users/' + userCredential.user.uid).set({
+                        email: email,
+                        role: "user",
+                        verified: false
+                    });
+
+                    auth.signOut();
+                    toggleSignup();
+                });
+            })
+            .catch((error) => {
+                alert("ගිණුම සෑදිය නොහැක: " + error.message);
+            });
     }
-}
 
-function loginWithGoogle() {
-    auth.signInWithPopup(provider).catch(e => alert(e.message));
-}
-
-function showApp() {
-    document.getElementById('auth-page').classList.add('hidden');
-    document.getElementById('main-app').classList.remove('hidden');
-    document.getElementById('myn').innerText = myNm;
-    document.getElementById('my-p-img').src = myPic;
-    loadStories(); loadFriends();
-}
-
-function logout() { 
-    localStorage.clear(); 
-    auth.signOut().then(() => location.reload()); 
-}
-
-// ... Rest of your functions (searchUsers, loadStories, openChat etc.) remain the same as previous code ...
-// Make sure to include all those functions here to keep the app working.
-
-function pg(id, el) {
-    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-    document.getElementById(id).classList.remove('hidden');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    el.classList.add('active');
-}
-
-function searchUsers() {
-    const q = document.getElementById('search-input').value.toLowerCase();
-    const res = document.getElementById('search-results'); res.innerHTML = "";
-    if(q.length < 2) return;
-    db.ref('users').orderByChild('name').startAt(q).limitToFirst(5).once('value', snap => {
-        snap.forEach(u => {
-            if(u.key === myPh) return;
-            res.innerHTML += `<div class="chat-item"><img src="${u.val().pic}" class="p-img"><div style="flex:1;"><b>${u.val().name}</b></div><button onclick="sendReq('${u.key}','${u.val().name}')" style="width:auto; background:var(--viber); border:none; font-size:10px; padding:5px 10px;">Add</button></div>`;
-        });
-    });
-}
-
-function sendReq(ph, nm) {
-    db.ref('friends/'+ph+'/'+myPh).set({status:'pending', name:myNm, pic:myPic});
-    alert("Request sent!");
-}
-
-function loadFriends() {
-    db.ref('friends/'+myPh).on('value', snap => {
-        const c = document.getElementById('cons'); c.innerHTML = "";
-        snap.forEach(f => {
-            const d = f.val();
-            if(d.status==='accepted') {
-                c.innerHTML += `<div class="chat-item" onclick="openChat('${f.key}','${d.name}','${d.pic}')"><img src="${d.pic}" class="p-img"><div><b>${d.name}</b><br><small style="color:gray;">Tap to chat</small></div></div>`;
-            } else if(d.status==='pending') {
-                c.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>Req from <b>${d.name}</b></span><button onclick="acc('${f.key}','${d.name}','${d.pic}')" style="width:auto; background:green; border:none; padding:5px 10px;">Accept</button></div>`;
-            }
-        });
-    });
-}
-
-function acc(ph, nm, pic) {
-    db.ref('friends/'+myPh+'/'+ph).set({status:'accepted', name:nm, pic:pic});
-    db.ref('friends/'+ph+'/'+myPh).set({status:'accepted', name:myNm, pic:myPic});
-}
-
-function openChat(ph, name, pic) {
-    activeChatPh = ph; document.getElementById('chat-name').innerText = name;
-    document.getElementById('chat-window').classList.remove('hidden'); history.pushState({v:'c'}, '');
-    const cid = myPh < ph ? myPh+"_"+ph : ph+"_"+myPh;
-    db.ref('messages/'+cid).on('value', s => {
-        const mc = document.getElementById('msg-container'); mc.innerHTML = "";
-        s.forEach(m => {
-            const side = m.val().sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#222;';
-            mc.innerHTML += `<div class="msg-bubble" style="${side} padding:10px; border-radius:15px;">${m.val().text}</div>`;
-        });
-        mc.scrollTop = mc.scrollHeight;
-    });
-}
-
-function sendMsg() {
-    const msg = document.getElementById('msg-input').value; if(!msg.trim()) return;
-    const cid = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
-    db.ref('messages/'+cid).push({sender:myPh, text:msg, time:Date.now()});
-    document.getElementById('msg-input').value = "";
-}
-
-function loadStories() {
-    db.ref('stories').on('value', snap => {
-        const f = document.getElementById('feed'); f.innerHTML = "";
-        snap.forEach(x => {
-            const s = x.val();
-            f.insertAdjacentHTML('afterbegin', `<div class="card"><div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;"><img src="${s.uPic}" style="width:30px; height:30px; border-radius:50%;"><b>${s.user}</b></div><div>${s.text}</div>${s.img ? `<img src="${s.img}" style="width:100%; border-radius:10px; margin-top:10px;">` : ''}</div>`);
-        });
-    });
-}
-window.onpopstate = () => { document.getElementById('chat-window').classList.add('hidden'); };
+    function toggleSignup() {
+        document.getElementById('auth-form').classList.toggle('hidden');
+        document.getElementById('signup-form').classList.toggle('hidden');
+    }
 </script>
+
 </body>
 </html>

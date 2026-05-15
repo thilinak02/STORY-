@@ -12,26 +12,23 @@
         .login-box { background: var(--card); padding: 30px; border-radius: 25px; width: 90%; max-width: 380px; text-align: center; border: 1px solid #1a1a1a; }
         input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid #222; background: #111; color: white; box-sizing: border-box; }
         button { width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--viber); color: white; font-weight: bold; cursor: pointer; }
-        .admin-note { font-size: 10px; color: #222; margin-top: 20px; }
     </style>
 </head>
 <body>
 
 <div class="login-box">
     <h1>STORY PRO</h1>
-    <p id="status-msg" style="font-size:13px; color:#aaa;">Email ලිපිනය හෝ Admin ID ඇතුළත් කරන්න</p>
+    <p id="status-msg" style="font-size:13px; color:#aaa;">Email හෝ Admin ID ඇතුළත් කරන්න</p>
     
-    <div id="login-ui">
-        <input id="main-input" type="text" placeholder="Email or Admin ID">
+    <div id="login-form">
+        <input id="user-input" type="text" placeholder="Email or Admin ID">
         <input id="pass-input" type="password" placeholder="Password (Only for Admin)">
-        <button onclick="handleLogic()">Continue</button>
+        <button onclick="handleLogin()">Continue</button>
     </div>
-
-    <div class="admin-note">Secure Access System</div>
 </div>
 
 <script>
-    // ඔබගේ Firebase දත්ත
+    // ඔබ ලබා දුන් Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
       authDomain: "story-ceca0.firebaseapp.com",
@@ -41,30 +38,29 @@
       appId: "1:820075788039:web:421fd811a4b4a3249a77a2"
     };
 
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
-    // ඔබගේ Admin දත්ත
-    const SECRET_ID = "0712729189";
-    const SECRET_PW = "Thilinak9411@";
+    // Admin Credentials (පරිශීලකයන්ට නොපෙනේ)
+    const ADMIN_ID = "0712729189";
+    const ADMIN_PW = "Thilinak9411@";
 
-    function handleLogic() {
-        const val = document.getElementById('main-input').value.trim();
-        const pw = document.getElementById('pass-input').value.trim();
+    function handleLogin() {
+        const input = document.getElementById('user-input').value.trim();
+        const pass = document.getElementById('pass-input').value.trim();
 
-        // 1. Admin පරීක්ෂාව
-        if (val === SECRET_ID && pw === SECRET_PW) {
+        // Admin පරීක්ෂාව
+        if (input === ADMIN_ID && pass === ADMIN_PW) {
             alert("Welcome Admin!");
-            // Admin පැනලය තිබෙන පිටුවේ නම මෙතනට දමන්න
-            window.location.href = "admin.html"; 
+            window.location.href = "admin_panel.html"; 
             return;
         }
 
-        // 2. User (Gmail OTP/Link) පරීක්ෂාව
-        if (val.includes("@")) {
-            sendEmailLink(val);
+        // සාමාන්‍ය පරිශීලක - Gmail OTP (Email Link)
+        if (input.includes("@")) {
+            sendEmailLink(input);
         } else {
-            alert("කරුණාකර නිවැරදි දත්ත ඇතුළත් කරන්න.");
+            alert("කරුණාකර නිවැරදි විද්‍යුත් තැපෑලක් හෝ Admin දත්ත ඇතුළත් කරන්න.");
         }
     }
 
@@ -76,21 +72,20 @@
         auth.sendSignInLinkToEmail(email, settings)
             .then(() => {
                 window.localStorage.setItem('emailForSignIn', email);
-                alert("Login ලින්ක් එක ඔබගේ Gmail (Inbox) වෙත එවන ලදී.");
+                alert("ලොග් වීමට අවශ්‍ය ලින්ක් එක ඔබගේ Gmail වෙත එවන ලදී.");
             })
             .catch(err => alert("Error: " + err.message));
     }
 
-    // Gmail ලින්ක් එක ක්ලික් කළ පසු ලොග් වීම
+    // Gmail ලින්ක් එකෙන් පැමිණි විට ලොග් වීම තහවුරු කිරීම
     window.addEventListener('load', () => {
         if (auth.isSignInWithEmailLink(window.location.href)) {
             let email = window.localStorage.getItem('emailForSignIn');
-            if (!email) email = window.prompt('කරුණාකර තහවුරු කිරීමට ඔබගේ Email එක ඇතුළත් කරන්න:');
-            
+            if (!email) email = window.prompt('Confirm your email:');
             auth.signInWithEmailLink(email, window.location.href)
                 .then(() => {
                     window.localStorage.removeItem('emailForSignIn');
-                    window.location.href = "main_story.html"; // සාමාන්‍ය පරිශීලක පිටුව
+                    window.location.href = "main.html"; // සාමාන්‍ය පේජය
                 });
         }
     });

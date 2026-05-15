@@ -3,65 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORY PRO - Admin Panel</title>
+    <title>STORY PRO - Login</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <style>
-        :root { --viber: #7360f2; --bg: #000; --card: #0a0a0a; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; }
-        .container { max-width: 500px; margin: auto; padding: 20px; }
-        
-        /* Login UI */
-        .login-box { background: var(--card); padding: 30px; border-radius: 20px; text-align: center; border: 1px solid #1a1a1a; margin-top: 50px; }
-        input, textarea { width: 100%; padding: 12px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #111; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--viber); color: white; font-weight: bold; cursor: pointer; }
-        
-        /* Admin Dashboard */
-        .admin-panel { display: none; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid #222; }
-        .story-card { background: var(--card); padding: 15px; border-radius: 15px; margin-top: 15px; border-left: 5px solid var(--viber); }
-        .delete-btn { background: #ff4444; width: auto; padding: 5px 15px; font-size: 12px; margin-top: 10px; }
+        :root { --viber: #7360f2; --bg: #000; --card: #0d0d0d; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .login-box { background: var(--card); padding: 30px; border-radius: 25px; width: 90%; max-width: 380px; text-align: center; border: 1px solid #1a1a1a; }
+        h1 { font-size: 26px; margin-bottom: 20px; color: white; }
+        input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid #222; background: #111; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--viber); color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { opacity: 0.8; }
+        .divider { margin: 20px 0; font-size: 12px; color: #444; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="login-section" class="login-box">
-        <h1>STORY PRO</h1>
-        <p style="color:var(--viber)">ADMIN ACCESS</p>
-        <input id="l-user" type="text" placeholder="Phone Number" value="0712729189">
-        <input id="l-pw" type="password" placeholder="Password">
-        <button onclick="handleLogin()">Enter Admin</button>
+<div class="login-box">
+    <h1>STORY PRO</h1>
+    
+    <div id="login-form">
+        <input id="user-input" type="text" placeholder="Email or Admin ID">
+        <input id="pass-input" type="password" placeholder="Password (Only for Admin)" id="admin-pass-field">
+        
+        <button id="main-btn" onclick="handleIdentify()">Continue</button>
+        
+        <div class="divider">OR</div>
+        
+        <button style="background:white; color:black;" onclick="loginWithGoogle()">
+            Continue with Google
+        </button>
     </div>
 
-    <div id="admin-panel" class="admin-panel">
-        <div class="header">
-            <h2>Admin Panel</h2>
-            <button onclick="logout()" style="width:auto; padding:5px 15px; background:#333;">Logout</button>
-        </div>
-
-        <div class="story-card">
-            <h3>නව කතාවක් ලියන්න</h3>
-            <input id="story-title" type="text" placeholder="කතාවේ මාතෘකාව">
-            <textarea id="story-content" rows="5" placeholder="කතාව මෙතන ලියන්න..."></textarea>
-            <button onclick="publishStory()">Publish Story</button>
-        </div>
-
-        <h3 style="margin-top:30px;">පවතින කතා (Manage Stories)</h3>
-        <div id="story-list">
-            </div>
+    <div id="otp-section" class="hidden">
+        <p style="font-size:13px; color:var(--viber);">ඔබේ විද්‍යුත් තැපෑලට (Email) එවූ OTP කේතය ඇතුළත් කරන්න.</p>
+        <input id="otp-code" type="text" placeholder="6-Digit Code">
+        <button onclick="verifyEmailOTP()">Verify & Login</button>
     </div>
 </div>
 
 <script>
-    // ඔබගේ Firebase Config
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
       authDomain: "story-ceca0.firebaseapp.com",
-      databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com",
       projectId: "story-ceca0",
       storageBucket: "story-ceca0.firebasestorage.app",
       messagingSenderId: "820075788039",
@@ -70,77 +57,68 @@
 
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const db = firebase.database();
 
-    const ADMIN_PH = "0712729189";
+    // Admin Credentials (සඟවා ඇත)
+    const ADMIN_ID = "0712729189"; 
     const ADMIN_PW = "Thilinak9411@";
 
-    // ලොගින් පාලනය
-    function handleLogin() {
-        const id = document.getElementById('l-user').value.trim();
-        const pw = document.getElementById('l-pw').value.trim();
+    function handleIdentify() {
+        const input = document.getElementById('user-input').value.trim();
+        const pass = document.getElementById('pass-input').value.trim();
 
-        if (id === ADMIN_PH && pw === ADMIN_PW) {
-            showAdminPanel();
+        // 1. Admin පරීක්ෂාව
+        if (input === ADMIN_ID && pass === ADMIN_PW) {
+            alert("Welcome Admin!");
+            window.location.href = "admin_panel.html";
+            return;
+        }
+
+        // 2. සාමාන්‍ය පරිශීලක (Email OTP)
+        if (input.includes("@")) {
+            sendEmailOTP(input);
         } else {
-            alert("වැරදි දත්ත ඇතුළත් කළා!");
+            alert("කරුණාකර නිවැරදි Email ලිපිනයක් හෝ Admin දත්ත ඇතුළත් කරන්න.");
         }
     }
 
-    function showAdminPanel() {
-        document.getElementById('login-section').style.display = 'none';
-        document.getElementById('admin-panel').style.display = 'block';
-        loadStories();
+    // Gmail OTP පද්ධතිය (Firebase Email Link Auth)
+    function sendEmailOTP(email) {
+        const actionCodeSettings = {
+            url: window.location.href,
+            handleCodeInApp: true
+        };
+
+        auth.sendSignInLinkToEmail(email, actionCodeSettings)
+            .then(() => {
+                window.localStorage.setItem('emailForSignIn', email);
+                alert("Login ලින්ක් එක ඔබගේ Gmail වෙත එවන ලදී. කරුණාකර Inbox පරීක්ෂා කරන්න.");
+            })
+            .catch((error) => alert("Error: " + error.message));
     }
 
-    // කතාවක් Publish කිරීම (Database එකට දැමීම)
-    function publishStory() {
-        const title = document.getElementById('story-title').value.trim();
-        const content = document.getElementById('story-content').value.trim();
-
-        if (!title || !content) return alert("මාතෘකාව සහ කතාව ඇතුළත් කරන්න!");
-
-        const storyId = db.ref('stories').push().key;
-        db.ref('stories/' + storyId).set({
-            id: storyId,
-            title: title,
-            content: content,
-            date: new Date().toLocaleDateString()
-        }).then(() => {
-            alert("කතාව සාර්ථකව පල කළා!");
-            document.getElementById('story-title').value = "";
-            document.getElementById('story-content').value = "";
-        });
+    // Google Login
+    function loginWithGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).then(() => {
+            window.location.href = "main.html";
+        }).catch(err => alert(err.message));
     }
 
-    // සියලුම කතා Load කිරීම
-    function loadStories() {
-        db.ref('stories').on('value', (snapshot) => {
-            const list = document.getElementById('story-list');
-            list.innerHTML = "";
-            snapshot.forEach((child) => {
-                const data = child.val();
-                list.innerHTML += `
-                    <div class="story-card">
-                        <h4>${data.title}</h4>
-                        <p style="font-size:13px; color:#aaa;">${data.content.substring(0, 50)}...</p>
-                        <button class="delete-btn" onclick="deleteStory('${data.id}')">Delete Story</button>
-                    </div>
-                `;
-            });
-        });
-    }
-
-    // කතාවක් මැකීම
-    function deleteStory(id) {
-        if (confirm("මෙම කතාව මැකීමට ඔබට සහතිකද?")) {
-            db.ref('stories/' + id).remove();
+    // පිටුව Load වන විට Email Link එක පරීක්ෂා කිරීම
+    window.onload = function() {
+        if (auth.isSignInWithEmailLink(window.location.href)) {
+            let email = window.localStorage.getItem('emailForSignIn');
+            if (!email) {
+                email = window.prompt('කරුණාකර තහවුරු කිරීම සඳහා ඔබගේ Email එක නැවත ඇතුළත් කරන්න:');
+            }
+            auth.signInWithEmailLink(email, window.location.href)
+                .then(() => {
+                    window.localStorage.removeItem('emailForSignIn');
+                    window.location.href = "main.html";
+                })
+                .catch((error) => alert("ලින්ක් එක වලංගු නැත."));
         }
-    }
-
-    function logout() {
-        location.reload();
-    }
+    };
 </script>
 
 </body>

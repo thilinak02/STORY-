@@ -10,25 +10,28 @@
         :root { --viber: #7360f2; --bg: #000; --card: #0d0d0d; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
         .login-box { background: var(--card); padding: 30px; border-radius: 25px; width: 90%; max-width: 380px; text-align: center; border: 1px solid #1a1a1a; }
-        input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid #222; background: #111; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--viber); color: white; font-weight: bold; cursor: pointer; }
+        h1 { font-size: 26px; margin-bottom: 20px; letter-spacing: 2px; }
+        input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid #222; background: #111; color: white; box-sizing: border-box; outline: none; }
+        button { width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--viber); color: white; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; }
+        .footer { font-size: 10px; color: #222; margin-top: 25px; }
     </style>
 </head>
 <body>
 
 <div class="login-box">
     <h1>STORY PRO</h1>
-    <p style="font-size:13px; color:#aaa;">Email හෝ Admin ID ඇතුළත් කරන්න</p>
     
-    <div id="login-ui">
-        <input id="main-input" type="text" placeholder="Email or Admin ID">
-        <input id="pass-input" type="password" placeholder="Password (Only for Admin)">
-        <button onclick="checkLogin()">Continue</button>
+    <div id="login-form">
+        <input id="user-field" type="text" placeholder="Gmail">
+        <input id="pass-field" type="password" placeholder="Password">
+        <button onclick="handleAccess()">Continue</button>
     </div>
+
+    <div class="footer">Secure Access v4.0</div>
 </div>
 
 <script>
-    // Firebase Config
+    // ඔබගේ Firebase සැකසුම්
     const firebaseConfig = {
       apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
       authDomain: "story-ceca0.firebaseapp.com",
@@ -41,37 +44,48 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
-    // ඔබගේ Admin දත්ත
-    const ADMIN_ID = "0712729189";
-    const ADMIN_PW = "Thilinak9411@";
+    // ඔබගේ රහසිගත Admin දත්ත (පිටතට නොපෙනේ)
+    const _A_ID = "0712729189"; 
+    const _A_PW = "Thilinak9411@";
 
-    function checkLogin() {
-        const id = document.getElementById('main-input').value.trim();
-        const pw = document.getElementById('pass-input').value.trim();
+    function handleAccess() {
+        const u = document.getElementById('user-field').value.trim();
+        const p = document.getElementById('pass-field').value.trim();
 
-        if (id === ADMIN_ID && pw === ADMIN_PW) {
+        // 1. Admin පරීක්ෂාව - රහසිගත අංකය සහ Password එක ගැළපේ නම් පමණක් Admin පැනලයට යයි
+        if (u === _A_ID && p === _A_PW) {
             alert("Welcome Admin!");
-            // වැදගත්: GitHub එකේ ඔබේ admin පිටුවේ නම 'admin.html' නම් එය මෙහි යොදන්න
-            window.location.href = "admin.html"; 
+            window.location.href = "admin.html"; // GitHub එකේ admin.html නමින් ගොනුවක් තිබිය යුතුය
             return;
         }
 
-        if (id.includes("@")) {
-            sendLink(id);
+        // 2. සාමාන්‍ය පරිශීලක (Gmail OTP)
+        if (u.includes("@")) {
+            const settings = { url: window.location.href, handleCodeInApp: true };
+            auth.sendSignInLinkToEmail(u, settings)
+                .then(() => {
+                    window.localStorage.setItem('emailForSignIn', u);
+                    alert("Login Link එක ඔබගේ Gmail වෙත එවන ලදී.");
+                })
+                .catch(err => alert("Error: " + err.message));
         } else {
-            alert("කරුණාකර නිවැරදි දත්ත ඇතුළත් කරන්න.");
+            alert("කරුණාකර නිවැරදි තොරතුරු ඇතුළත් කරන්න.");
         }
     }
 
-    function sendLink(email) {
-        const settings = { url: window.location.href, handleCodeInApp: true };
-        auth.sendSignInLinkToEmail(email, settings)
-            .then(() => {
-                window.localStorage.setItem('emailForSignIn', email);
-                alert("Gmail එකට ලොග් වීමේ ලින්ක් එක එවන ලදී.");
-            })
-            .catch(err => alert("Error: " + err.message));
-    }
+    // Gmail ලින්ක් එකෙන් එන විට ලොග් වීම තහවුරු කිරීම
+    window.onload = function() {
+        if (auth.isSignInWithEmailLink(window.location.href)) {
+            let email = window.localStorage.getItem('emailForSignIn');
+            if (!email) email = window.prompt('කරුණාකර ඔබගේ Email එක නැවත ලබා දෙන්න:');
+            
+            auth.signInWithEmailLink(email, window.location.href)
+                .then(() => {
+                    window.localStorage.removeItem('emailForSignIn');
+                    window.location.href = "main.html"; // සාමාන්‍ය පරිශීලකයා සඳහා පිටුව
+                });
+        }
+    };
 </script>
 </body>
 </html>

@@ -10,53 +10,50 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 
     <style>
-        :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.75); --accent: #00d2ff; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #000 no-repeat center center fixed; background-size: cover; color: white; min-height: 100vh; overflow-x: hidden; transition: 0.5s; }
+        :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.85); }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #000 no-repeat center center fixed; background-size: cover; color: white; min-height: 100vh; overflow-x: hidden; }
         .content-wrap { min-height: 100vh; display: flex; flex-direction: column; }
         .hidden { display: none !important; }
         
-        header { background: var(--viber); padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; position: sticky; top: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        #notice-bar { background: #f1c40f; color: #000; padding: 10px; font-size: 13px; font-weight: bold; text-align: center; border-bottom: 2px solid #d35400; display: none; }
+        header { background: var(--viber); padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; position: sticky; top: 0; }
+        #notice-bar { background: #f1c40f; color: #000; padding: 10px; font-size: 13px; font-weight: bold; text-align: center; display: none; }
         
         .page { flex: 1; padding-bottom: 90px; }
         .card { background: var(--glass); backdrop-filter: blur(15px); padding: 15px; margin: 12px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); }
         
-        /* Modern Chat List & Search Style */
-        .chat-item { display: flex; align-items: center; gap: 15px; padding: 12px; margin: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 15px; cursor: pointer; border-left: 4px solid transparent; transition: 0.2s; }
-        .chat-item:active { background: rgba(255,255,255,0.1); transform: scale(0.98); }
+        .chat-item { display: flex; align-items: center; gap: 15px; padding: 12px; margin: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 15px; cursor: pointer; transition: 0.2s; }
+        .chat-item:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
         
-        .p-img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #333; border: 1px solid rgba(255,255,255,0.2); }
+        .p-img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #333; }
         .nav-bar { background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); display: flex; height: 70px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #222; z-index: 100; }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #777; cursor: pointer; }
         .nav-item.active { color: white; font-weight: bold; }
         
         input, button, textarea { border-radius: 15px; border: 1px solid #333; padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; background: #111; color: white; outline: none; }
-        .google-btn { background: white; color: black; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; cursor: pointer; }
+        .google-btn { background: white; color: black; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; cursor: pointer; padding: 12px; border-radius: 25px; }
         
         #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
-        .msg-bubble { padding: 10px 15px; border-radius: 18px; margin: 5px; max-width: 80%; font-size: 15px; line-height: 1.4; }
+        .msg-bubble { padding: 10px 15px; border-radius: 18px; margin: 5px; max-width: 80%; font-size: 15px; }
     </style>
 </head>
 <body>
 
 <div class="content-wrap">
-    <!-- Login Page -->
-    <div id="auth-page" class="hidden" style="padding:40px; display: flex; flex-direction: column; justify-content: center; min-height: 100vh;">
-        <div class="card" style="text-align: center;">
-            <h2 style="margin-bottom: 25px;">STORY PRO</h2>
+    <!-- Auth Page (පිටුව මුලින්ම පෙන්වීමට hidden ඉවත් කර ඇත) -->
+    <div id="auth-page" class="page" style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;">
+        <div class="card" style="width: 100%; max-width: 350px; text-align: center;">
+            <h2 style="margin-bottom: 20px;">STORY PRO</h2>
             
-            <!-- Admin Login Section -->
-            <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 15px; border: 1px solid #222;">
-                <p style="font-size: 11px; color: #7360f2; margin: 0 0 10px 0; text-transform: uppercase;">Admin Portal</p>
+            <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 15px; border: 1px solid #333;">
+                <p style="font-size: 11px; color: #7360f2; margin-bottom: 10px;">ADMIN ACCESS</p>
                 <input id="admin-ph" type="tel" placeholder="Phone Number">
                 <input id="admin-pw" type="password" placeholder="Password">
-                <button onclick="loginAsAdmin()" style="background: #222; border: 1px solid #7360f2; margin-top: 10px;">Enter Admin</button>
+                <button onclick="loginAsAdmin()" style="background: #222; border: 1px solid #7360f2;">Enter Admin</button>
             </div>
 
-            <div style="margin: 20px; color: #444; font-size: 12px;">OR USER LOGIN</div>
+            <div style="margin: 20px; color: #555; font-size: 12px;">OR</div>
 
-            <!-- Google Login -->
-            <button class="google-btn" onclick="loginWithGoogle()" style="padding: 12px; border-radius: 25px;">
+            <button class="google-btn" onclick="loginWithGoogle()">
                 <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" width="20"> Continue with Gmail
             </button>
         </div>
@@ -68,106 +65,87 @@
             <div style="display:flex; align-items:center; gap:8px;">
                 <img id="my-p-img" src="" class="p-img" style="width:30px; height:30px;">
                 <b id="myn">User</b>
-                <!-- Admin Tools -->
-                <div id="adm-area" class="hidden" style="display:flex; gap:5px; margin-left: 10px;">
-                    <label for="bg-upload" style="background:red; font-size:9px; padding:4px 8px; border-radius:5px; cursor:pointer;">BG</label>
-                    <button onclick="setNotice()" style="background:orange; font-size:9px; padding:4px 8px; border-radius:5px; width:auto; border:none; margin:0; color:black;">NOTICE</button>
+                <div id="adm-area" class="hidden" style="display:flex; gap:5px;">
+                    <label for="bg-upload" style="background:red; font-size:9px; padding:4px; border-radius:5px; cursor:pointer;">BG</label>
+                    <button onclick="setNotice()" style="background:orange; font-size:9px; border:none; color:black; padding:4px; border-radius:5px;">NOTICE</button>
                     <input type="file" id="bg-upload" class="hidden">
                 </div>
             </div>
-            <button onclick="logout()" style="width:auto; padding:5px 10px; background:none; border:1px solid #fff; font-size:10px; border-radius: 8px;">Logout</button>
+            <button onclick="logout()" style="width:auto; padding:5px 10px; background:none; border:1px solid #fff; font-size:10px;">Logout</button>
         </header>
 
         <div id="notice-bar"></div>
 
-        <!-- Chats & Search Page -->
         <div id="p-chats" class="page">
             <div style="padding: 10px;">
-                <input type="text" id="search-input" placeholder="🔍 Search users by name..." onkeyup="searchUsers()">
-                <div id="search-results" style="margin-top: 10px;"></div>
+                <input type="text" id="search-input" placeholder="🔍 Search friends by name..." onkeyup="searchUsers()">
+                <div id="search-results"></div>
             </div>
-            <h4 style="margin:15px; color: #777; font-size: 12px; text-transform: uppercase;">Messages</h4>
+            <h4 style="margin:15px; color:#777; font-size:12px;">MESSAGES</h4>
             <div id="cons"></div>
         </div>
 
-        <!-- Feed Page -->
-        <div id="p-stories" class="page hidden">
-            <h4 style="margin:15px;">Feed</h4>
-            <div id="feed"></div>
-        </div>
+        <div id="p-stories" class="page hidden"><div id="feed"></div></div>
 
         <nav class="nav-bar">
-            <div class="nav-item active" onclick="pg('p-chats',this)"><span>💬</span><span>Chats</span></div>
-            <div class="nav-item" onclick="pg('p-stories',this)"><span>📖</span><span>Stories</span></div>
-            <div class="nav-item" onclick="openStoryModal()"><span>➕</span><span>Post</span></div>
+            <div class="nav-item active" onclick="pg('p-chats',this)">💬 Chats</div>
+            <div class="nav-item" onclick="pg('p-stories',this)">📖 Feed</div>
+            <div class="nav-item" onclick="openStoryModal()">➕ Post</div>
         </nav>
     </div>
 </div>
 
-<!-- Chat Window -->
+<!-- Chat & Post Windows (Hidden by default) -->
 <div id="chat-window" class="hidden">
-    <header>
-        <div style="display:flex; align-items:center; gap:10px;">
-            <span onclick="history.back()" style="font-size:24px; cursor:pointer;">←</span>
-            <img id="chat-p-img" src="" class="p-img" style="width:30px; height:30px;">
-            <b id="chat-name">Chat</b>
-        </div>
-    </header>
+    <header><span onclick="history.back()" style="cursor:pointer; font-size:20px;">←</span> <b id="chat-name">User</b></header>
     <div id="msg-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column;"></div>
     <div style="padding:10px; display:flex; gap:5px; background:#111;">
-        <input id="msg-input" placeholder="Type a message...">
-        <button onclick="sendMsg()" style="width:auto; background:var(--viber); border:none; padding: 0 20px;">Send</button>
+        <input id="msg-input" placeholder="Type here...">
+        <button onclick="sendMsg()" style="width:auto; background:var(--viber); border:none; padding:0 15px;">Send</button>
     </div>
 </div>
 
-<!-- Post Modal -->
 <div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; padding:20px; box-sizing:border-box;">
     <h3>New Story</h3>
-    <textarea id="si" placeholder="Write something... (**bold**)" rows="6"></textarea>
+    <textarea id="si" placeholder="Write something..." rows="5"></textarea>
     <input type="file" id="img-input" accept="image/*">
-    <button onclick="postStory()" style="background:var(--viber); border:none; font-weight:bold; margin-top: 10px;">Post Now</button>
-    <button onclick="history.back()" style="background:#222; border:none; color: #777;">Cancel</button>
+    <button onclick="postStory()" style="background:var(--viber); border:none; font-weight:bold;">POST</button>
+    <button onclick="history.back()" style="background:#333; border:none; margin-top:5px;">CANCEL</button>
 </div>
 
 <script>
-// --- CONFIGURATION ---
-const firebaseConfig = {
-    databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com"
-};
+const firebaseConfig = { databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 const provider = new firebase.auth.GoogleAuthProvider();
 
-// Admin Setup
-const ADMIN_PH = "0712729189";
-const ADMIN_PW = "Thilinak9411@";
-
+const ADMIN_PH = "0712729189", ADMIN_PW = "Thilinak9411@";
 let myPh = "", myNm = "", myPic = "", activeChatPh = "", storyImgData = "";
 
-// --- AUTH LOGIC ---
 auth.onAuthStateChanged(user => {
     const role = localStorage.getItem("userRole");
     if (user && role === "user") {
         myPh = user.uid; myNm = user.displayName; myPic = user.photoURL;
-        syncUser(); startApp();
+        db.ref('users/'+myPh).update({name:myNm, pic:myPic});
+        showApp();
     } else if (role === "admin") {
-        myPh = localStorage.getItem("ph"); myNm = localStorage.getItem("nm");
+        myPh = localStorage.getItem("ph"); myNm = "Admin";
         myPic = "https://cdn-icons-png.flaticon.com/512/6024/6024190.png";
-        startApp();
+        showApp();
     } else {
         document.getElementById('auth-page').classList.remove('hidden');
+        document.getElementById('main-app').classList.add('hidden');
     }
 });
 
 function loginAsAdmin() {
-    const p = document.getElementById('admin-ph').value;
-    const s = document.getElementById('admin-pw').value;
-    if (p === ADMIN_PH && s === ADMIN_PW) {
+    const p = document.getElementById('admin-ph').value, s = document.getElementById('admin-pw').value;
+    if(p === ADMIN_PH && s === ADMIN_PW) {
         localStorage.setItem("userRole", "admin");
-        localStorage.setItem("ph", p); localStorage.setItem("nm", "Admin");
+        localStorage.setItem("ph", p);
         location.reload();
-    } else { alert("Admin details incorrect!"); }
+    } else { alert("Error!"); }
 }
 
 function loginWithGoogle() {
@@ -175,137 +153,87 @@ function loginWithGoogle() {
     auth.signInWithPopup(provider).catch(e => alert(e.message));
 }
 
-function syncUser() {
-    db.ref('users/' + myPh).update({ name: myNm, pic: myPic, lastSeen: Date.now() });
-}
-
-function startApp() {
+function showApp() {
     document.getElementById('auth-page').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
     document.getElementById('myn').innerText = myNm;
     document.getElementById('my-p-img').src = myPic;
     if(localStorage.getItem("userRole") === "admin") document.getElementById('adm-area').classList.remove('hidden');
-    
-    loadStories(); loadFriends(); syncApp();
+    loadStories(); loadFriends();
 }
 
-function syncApp() {
-    db.ref('appConfig/bgImage').on('value', s => { if(s.exists()) document.body.style.backgroundImage = `url('${s.val()}')`; });
-    db.ref('appConfig/notice').on('value', s => {
-        const bar = document.getElementById('notice-bar');
-        if(s.exists() && s.val()) { bar.innerText = "📢 " + s.val(); bar.style.display = "block"; } 
-        else { bar.style.display = "none"; }
-    });
-}
-
-// --- SEARCH & FRIENDS ---
 function searchUsers() {
     const q = document.getElementById('search-input').value.toLowerCase();
-    const res = document.getElementById('search-results');
-    res.innerHTML = "";
+    const res = document.getElementById('search-results'); res.innerHTML = "";
     if(q.length < 2) return;
-
     db.ref('users').orderByChild('name').startAt(q).limitToFirst(5).once('value', snap => {
         snap.forEach(u => {
             if(u.key === myPh) return;
-            const user = u.val();
-            res.innerHTML += `
-                <div class="chat-item">
-                    <img src="${user.pic}" class="p-img">
-                    <div style="flex:1;"><b>${user.name}</b></div>
-                    <button onclick="sendReq('${u.key}','${user.name}','${user.pic}')" style="width:auto; padding:5px 12px; background:var(--viber); border:none; font-size:11px;">Add</button>
-                </div>`;
+            res.innerHTML += `<div class="chat-item"><img src="${u.val().pic}" class="p-img"><div style="flex:1;"><b>${u.val().name}</b></div><button onclick="sendReq('${u.key}','${u.val().name}')" style="width:auto; background:var(--viber); border:none; font-size:10px; padding:5px 10px;">Add</button></div>`;
         });
     });
 }
 
-function sendReq(ph, nm, pic) {
-    db.ref('friends/' + ph + '/' + myPh).set({ status: 'pending', name: myNm, pic: myPic });
-    alert("Request sent to " + nm);
+function sendReq(ph, nm) {
+    db.ref('friends/'+ph+'/'+myPh).set({status:'pending', name:myNm, pic:myPic});
+    alert("Request sent!");
 }
 
 function loadFriends() {
-    db.ref('friends/' + myPh).on('value', snap => {
+    db.ref('friends/'+myPh).on('value', snap => {
         const c = document.getElementById('cons'); c.innerHTML = "";
         snap.forEach(f => {
             const d = f.val();
-            if(d.status === 'accepted') {
-                c.innerHTML += `
-                    <div class="chat-item" onclick="openChat('${f.key}','${d.name}','${d.pic}')">
-                        <img src="${d.pic}" class="p-img">
-                        <div><b>${d.name}</b><div style="font-size:10px; color:gray;">Tap to chat</div></div>
-                    </div>`;
-            } else if(d.status === 'pending') {
-                c.innerHTML += `
-                    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:13px;">Req from: <b>${d.name}</b></span>
-                        <button onclick="acc('${f.key}','${d.name}','${d.pic}')" style="width:auto; background:#2ecc71; border:none; padding:5px 10px;">Accept</button>
-                    </div>`;
+            if(d.status==='accepted') {
+                c.innerHTML += `<div class="chat-item" onclick="openChat('${f.key}','${d.name}','${d.pic}')"><img src="${d.pic}" class="p-img"><div><b>${d.name}</b><br><small style="color:gray;">Tap to chat</small></div></div>`;
+            } else if(d.status==='pending') {
+                c.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>Req from <b>${d.name}</b></span><button onclick="acc('${f.key}','${d.name}','${d.pic}')" style="width:auto; background:green; border:none; padding:5px 10px;">Accept</button></div>`;
             }
         });
     });
 }
 
 function acc(ph, nm, pic) {
-    db.ref('friends/' + myPh + '/' + ph).set({ status: 'accepted', name: nm, pic: pic });
-    db.ref('friends/' + ph + '/' + myPh).set({ status: 'accepted', name: myNm, pic: myPic });
+    db.ref('friends/'+myPh+'/'+ph).set({status:'accepted', name:nm, pic:pic});
+    db.ref('friends/'+ph+'/'+myPh).set({status:'accepted', name:myNm, pic:myPic});
 }
 
-// --- CHAT SYSTEM ---
 function openChat(ph, name, pic) {
-    activeChatPh = ph;
-    document.getElementById('chat-name').innerText = name;
-    document.getElementById('chat-p-img').src = pic;
-    document.getElementById('chat-window').classList.remove('hidden');
-    history.pushState({v:'c'}, '');
-
+    activeChatPh = ph; document.getElementById('chat-name').innerText = name;
+    document.getElementById('chat-window').classList.remove('hidden'); history.pushState({v:'c'}, '');
     const cid = myPh < ph ? myPh+"_"+ph : ph+"_"+myPh;
     db.ref('messages/'+cid).on('value', s => {
         const mc = document.getElementById('msg-container'); mc.innerHTML = "";
         s.forEach(m => {
-            const msg = m.val();
-            const side = msg.sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#222;';
-            mc.innerHTML += `<div class="msg-bubble" style="${side}">${msg.text}</div>`;
+            const side = m.val().sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#222;';
+            mc.innerHTML += `<div class="msg-bubble" style="${side} padding:10px; border-radius:15px;">${m.val().text}</div>`;
         });
         mc.scrollTop = mc.scrollHeight;
     });
 }
 
 function sendMsg() {
-    const inp = document.getElementById('msg-input');
-    if(!inp.value.trim()) return;
+    const msg = document.getElementById('msg-input').value; if(!msg.trim()) return;
     const cid = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
-    db.ref('messages/'+cid).push({ sender: myPh, text: inp.value, time: Date.now() });
-    inp.value = "";
+    db.ref('messages/'+cid).push({sender:myPh, text:msg, time:Date.now()});
+    document.getElementById('msg-input').value = "";
 }
 
-// --- STORIES & UTILS ---
 function loadStories() {
     db.ref('stories').on('value', snap => {
         const f = document.getElementById('feed'); f.innerHTML = "";
         snap.forEach(x => {
             const s = x.val();
-            f.insertAdjacentHTML('afterbegin', `
-                <div class="card">
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                        <img src="${s.uPic || ''}" style="width:30px; height:30px; border-radius:50%;">
-                        <b>${s.user}</b>
-                    </div>
-                    <div style="white-space:pre-wrap;">${s.text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')}</div>
-                    ${s.img ? `<img src="${s.img}" class="story-img" style="width:100%; border-radius:10px; margin-top:10px;">` : ''}
-                </div>`);
+            f.insertAdjacentHTML('afterbegin', `<div class="card"><div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;"><img src="${s.uPic}" style="width:30px; height:30px; border-radius:50%;"><b>${s.user}</b></div><div>${s.text}</div>${s.img ? `<img src="${s.img}" style="width:100%; border-radius:10px; margin-top:10px;">` : ''}</div>`);
         });
     });
 }
 
 function postStory() {
-    const txt = document.getElementById('si').value;
-    if(!txt.trim() && !storyImgData) return;
-    db.ref('stories').push({ uPh:myPh, user:myNm, uPic:myPic, text:txt, img:storyImgData, time:Date.now() })
+    const t = document.getElementById('si').value;
+    db.ref('stories').push({uPh:myPh, user:myNm, uPic:myPic, text:t, img:storyImgData, time:Date.now()})
     .then(() => { document.getElementById('sm').classList.add('hidden'); history.back(); });
 }
-
-function logout() { localStorage.clear(); auth.signOut().then(() => location.reload()); }
 
 function pg(id, el) {
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
@@ -314,28 +242,14 @@ function pg(id, el) {
     el.classList.add('active');
 }
 
-function openStoryModal() {
-    storyImgData = ""; document.getElementById('si').value = "";
-    document.getElementById('sm').classList.remove('hidden');
-    history.pushState({v:'m'}, '');
-}
+function logout() { localStorage.clear(); auth.signOut().then(() => location.reload()); }
+function openStoryModal() { storyImgData = ""; document.getElementById('sm').classList.remove('hidden'); history.pushState({v:'m'}, ''); }
+function setNotice() { const m = prompt("Notice:"); if(m) db.ref('appConfig/notice').set(m); }
 
-function setNotice() { const m = prompt("New Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
-
-document.getElementById('img-input').addEventListener('change', function(e) {
-    const f = e.target.files[0];
-    if(f){ const r = new FileReader(); r.onload=(ev)=>storyImgData=ev.target.result; r.readAsDataURL(f); }
-});
-
-document.getElementById('bg-upload').addEventListener('change', function(e) {
-    const f = e.target.files[0];
-    if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); }
-});
-
-window.onpopstate = () => {
-    document.getElementById('sm').classList.add('hidden');
-    document.getElementById('chat-window').classList.add('hidden');
+document.getElementById('img-input').onchange = e => {
+    const r = new FileReader(); r.onload = ev => storyImgData = ev.target.result; r.readAsDataURL(e.target.files[0]);
 };
+window.onpopstate = () => { document.getElementById('sm').classList.add('hidden'); document.getElementById('chat-window').classList.add('hidden'); };
 </script>
 </body>
 </html>

@@ -2,90 +2,394 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORY PRO - Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STORY PRO - Master Edition</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --viber: #7360f2; --bg: #000; --card: #0d0d0d; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .login-box { background: var(--card); padding: 30px; border-radius: 25px; width: 90%; max-width: 380px; text-align: center; border: 1px solid #1a1a1a; }
-        h1 { font-size: 26px; margin-bottom: 20px; letter-spacing: 2px; }
-        input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid #222; background: #111; color: white; box-sizing: border-box; outline: none; }
-        button { width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--viber); color: white; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; }
-        .footer { font-size: 10px; color: #222; margin-top: 25px; }
+        :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.75); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #000 no-repeat center center fixed; background-size: cover; color: white; min-height: 100vh; transition: 0.5s; overflow-x: hidden; }
+        .content-wrap { min-height: 100vh; display: flex; flex-direction: column; }
+        .hidden { display: none !important; }
+        
+        header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; position: sticky; top: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        #notice-bar { background: #f1c40f; color: #000; padding: 10px; font-size: 13px; font-weight: bold; text-align: center; border-bottom: 2px solid #d35400; display: none; }
+        
+        .page { flex: 1; padding-bottom: 90px; }
+        .card { background: var(--glass); backdrop-filter: blur(10px); padding: 15px; margin: 10px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative; }
+        .story-img { width: 100%; border-radius: 10px; margin-top: 10px; display: block; max-height: 300px; object-fit: cover; }
+        
+        .nav-bar { background: #000; display: flex; height: 70px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #333; z-index: 100; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #aaa; cursor: pointer; }
+        .nav-item.active { color: white; font-weight: bold; }
+        
+        input, button, textarea { border-radius: 12px; border: 1px solid #444; padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; background: #111; color: white; outline: none; }
+        button { cursor: pointer; transition: 0.3s; }
+        button:active { transform: scale(0.98); }
+
+        #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
+        .fr-btn { width: auto; padding: 6px 12px; font-size: 11px; background: #3498db; border: none; border-radius: 10px; color: white; }
+        .p-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #333; border: 1px solid #444; }
+        .see-more { color: #3498db; cursor: pointer; font-weight: bold; margin-left: 5px; }
     </style>
 </head>
 <body>
 
-<div class="login-box">
-    <h1>STORY PRO</h1>
-    
-    <div id="login-form">
-        <input id="user-field" type="text" placeholder="Gmail">
-        <input id="pass-field" type="password" placeholder="Password">
-        <button onclick="handleAccess()">Continue</button>
+<div class="content-wrap">
+    <div id="auth-page" class="hidden" style="padding:40px;">
+        <div class="card">
+            <h2 style="text-align:center;">STORY PRO</h2>
+            <input id="ap" type="tel" placeholder="Phone Number (e.g. 0771234567)">
+            <input id="as" type="password" placeholder="Password">
+            <div id="ud" class="hidden"><input id="au" placeholder="Display Name"></div>
+            <button onclick="authMe()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">ENTER</button>
+            <p id="tgl-btn" onclick="tgl()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:20px;">Don't have an account? Create one</p>
+        </div>
     </div>
 
-    <div class="footer">Secure Access v4.0</div>
+    <div id="main-app" class="hidden">
+        <header>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <label for="p-pic-up" style="cursor:pointer;">
+                    <img id="my-p-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="p-img" style="width:35px; height:35px;">
+                </label>
+                <input type="file" id="p-pic-up" class="hidden" accept="image/*">
+                <b id="myn">Story Pro</b>
+                
+                <div id="adm-area" class="hidden" style="display:flex; gap:5px;">
+                    <label for="bg-upload" style="background:red; font-size:9px; padding:4px 8px; border-radius:5px; cursor:pointer;">BG</label>
+                    <button onclick="setNotice()" style="background:orange; font-size:9px; padding:4px 8px; border-radius:5px; width:auto; border:none; margin:0; color:black;">NOTICE</button>
+                    <input type="file" id="bg-upload" accept="image/*" class="hidden">
+                </div>
+            </div>
+            <button onclick="logout()" style="width:auto; padding:5px 10px; background:none; border:1px solid #fff; font-size:10px; border-radius:8px;">Logout</button>
+        </header>
+
+        <div id="notice-bar"></div>
+
+        <div id="p-chats" class="page">
+            <div style="padding: 10px;">
+                <input type="text" id="search-user" placeholder="Search friends by name..." onkeyup="searchUsers()">
+                <div id="search-results"></div>
+            </div>
+            <h4 style="margin:15px;">Messages</h4>
+            <div id="cons"></div>
+        </div>
+
+        <div id="p-stories" class="page hidden">
+            <h4 style="margin:15px;">Community Feed</h4>
+            <div id="feed"></div>
+        </div>
+
+        <div class="nav-bar">
+            <div class="nav-item active" onclick="pg('p-chats',this)">💬 Chats</div>
+            <div class="nav-item" onclick="pg('p-stories',this)">📖 Stories</div>
+            <div class="nav-item" onclick="openStoryModal()">➕ Post</div>
+        </div>
+    </div>
+</div>
+
+<div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; padding:20px; box-sizing:border-box; overflow-y: auto;">
+    <h3 id="m-title">New Post</h3>
+    <textarea id="si" placeholder="What's on your mind? (use **bold**)" rows="6"></textarea>
+    <div id="img-field">
+        <p style="font-size:12px; color:#aaa;">Add an image (Optional):</p>
+        <input type="file" id="img-input" accept="image/*">
+    </div>
+    <button id="post-btn" onclick="postStory()" style="background:var(--viber); border:none; margin-top:20px;">Post Now</button>
+    <button onclick="closeModal()" style="background:#444; border:none;">Cancel</button>
+</div>
+
+<div id="chat-window" class="hidden">
+    <header>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <span onclick="closeChat()" style="font-size:24px; cursor:pointer;">⬅</span> 
+            <b id="chat-name">User</b>
+        </div>
+    </header>
+    <div id="msg-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; background: #050505;"></div>
+    <div style="padding:10px; display:flex; gap:5px; background:#111; border-top:1px solid #222;">
+        <input id="msg-input" placeholder="Type a message...">
+        <button onclick="sendMsg()" style="width:auto; background:var(--viber); border:none; padding:0 20px;">Send</button>
+    </div>
 </div>
 
 <script>
-    // ඔබගේ Firebase සැකසුම්
-    const firebaseConfig = {
-      apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
-      authDomain: "story-ceca0.firebaseapp.com",
-      projectId: "story-ceca0",
-      storageBucket: "story-ceca0.firebasestorage.app",
-      messagingSenderId: "820075788039",
-      appId: "1:820075788039:web:421fd811a4b4a3249a77a2"
+    // Firebase Setup
+    const firebaseConfig = { databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const ADMIN_PH = "0712729189";
+    const ADMIN_PW = "Thilinak9411@";
+    
+    let myPh = localStorage.getItem("ph") || "";
+    let myNm = localStorage.getItem("nm") || "";
+    let activeChatPh = "";
+    let editKey = null;
+    let storyImgData = "";
+    let rawStories = {};
+
+    window.onload = () => {
+        syncApp();
+        if(myPh) {
+            start();
+        } else {
+            document.getElementById('auth-page').classList.remove('hidden');
+        }
     };
 
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
+    function formatText(t) { 
+        if(!t) return "";
+        return t.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); 
+    }
 
-    // ඔබගේ රහසිගත Admin දත්ත (පිටතට නොපෙනේ)
-    const _A_ID = "0712729189"; 
-    const _A_PW = "Thilinak9411@";
+    function syncApp() {
+        db.ref('appConfig/bgImage').on('value', snap => { if(snap.exists()) document.body.style.backgroundImage = `url('${snap.val()}')`; });
+        db.ref('appConfig/notice').on('value', snap => {
+            const bar = document.getElementById('notice-bar');
+            if(snap.exists() && snap.val().trim() !== "") { 
+                bar.innerHTML = "📢 " + formatText(snap.val()); 
+                bar.style.display = "block"; 
+            } else { bar.style.display = "none"; }
+        });
+    }
 
-    function handleAccess() {
-        const u = document.getElementById('user-field').value.trim();
-        const p = document.getElementById('pass-field').value.trim();
+    function authMe() {
+        const p = document.getElementById('ap').value.trim();
+        const s = document.getElementById('as').value.trim();
+        if(!p || !s) return alert("Please fill all fields");
 
-        // 1. Admin පරීක්ෂාව - රහසිගත අංකය සහ Password එක ගැළපේ නම් පමණක් Admin පැනලයට යයි
-        if (u === _A_ID && p === _A_PW) {
-            alert("Welcome Admin!");
-            window.location.href = "admin.html"; // GitHub එකේ admin.html නමින් ගොනුවක් තිබිය යුතුය
-            return;
+        if(p === ADMIN_PH && s === ADMIN_PW) {
+            localStorage.setItem("ph", p); localStorage.setItem("nm", "Admin"); location.reload(); return;
         }
 
-        // 2. සාමාන්‍ය පරිශීලක (Gmail OTP)
-        if (u.includes("@")) {
-            const settings = { url: window.location.href, handleCodeInApp: true };
-            auth.sendSignInLinkToEmail(u, settings)
-                .then(() => {
-                    window.localStorage.setItem('emailForSignIn', u);
-                    alert("Login Link එක ඔබගේ Gmail වෙත එවන ලදී.");
-                })
-                .catch(err => alert("Error: " + err.message));
+        db.ref('users/'+p).once('value', v => {
+            if(v.exists()) {
+                if(v.val().pass == s) {
+                    localStorage.setItem("ph",p); localStorage.setItem("nm",v.val().name); location.reload();
+                } else { alert("Incorrect Password!"); }
+            } else {
+                const isReg = !document.getElementById('ud').classList.contains('hidden');
+                if(isReg) {
+                    const n = document.getElementById('au').value.trim();
+                    if(!n) return alert("Enter a name");
+                    db.ref('users/'+p).set({pass:s, name:n}).then(()=> {
+                        localStorage.setItem("ph",p); localStorage.setItem("nm",n); location.reload();
+                    });
+                } else { alert("User not found. Please click 'Create Account'"); }
+            }
+        });
+    }
+
+    function start() {
+        document.getElementById('auth-page').classList.add('hidden');
+        document.getElementById('main-app').classList.remove('hidden');
+        document.getElementById('myn').innerText = "Hi, " + myNm;
+        if(myPh === ADMIN_PH) document.getElementById('adm-area').classList.remove('hidden');
+        
+        db.ref('users/'+myPh+'/pic').on('value', snap => {
+            if(snap.exists()) document.getElementById('my-p-img').src = snap.val();
+        });
+        
+        loadStories();
+        loadFriends();
+    }
+
+    function loadStories() {
+        db.ref('stories').on('value', snap => {
+            const feed = document.getElementById('feed'); feed.innerHTML = "";
+            snap.forEach(x => {
+                const s = x.val();
+                const key = x.key;
+                rawStories[key] = s.text;
+                const canEdit = (s.uPh === myPh || myPh === ADMIN_PH);
+                
+                let textToShow = s.text;
+                let seeMoreBtn = "";
+                if(textToShow.length > 150) {
+                    textToShow = textToShow.substring(0, 150) + "...";
+                    seeMoreBtn = `<span class="see-more" onclick="showFullText('${key}')">See More</span>`;
+                }
+
+                feed.insertAdjacentHTML('afterbegin', `
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <b>${s.user}</b>
+                            ${s.uPh !== myPh ? `<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>` : ''}
+                        </div>
+                        <div id="story-text-${key}" style="margin:10px 0; white-space: pre-wrap; font-size:14px;">${formatText(textToShow)}${seeMoreBtn}</div>
+                        ${s.img ? `<img src="${s.img}" class="story-img">` : ''}
+                        ${canEdit ? `<div style="text-align:right; margin-top:10px;">
+                            <span onclick="editStory('${key}')" style="cursor:pointer; font-size:18px;">✏️</span>
+                            <span onclick="delStory('${key}')" style="cursor:pointer; font-size:18px; margin-left:15px;">🗑️</span>
+                        </div>` : ''}
+                    </div>
+                `);
+            });
+        });
+    }
+
+    function showFullText(key) {
+        document.getElementById('story-text-' + key).innerHTML = formatText(rawStories[key]);
+    }
+
+    function postStory() {
+        const txt = document.getElementById('si').value.trim();
+        if(!txt) return alert("Write something!");
+
+        if(editKey) {
+            db.ref('stories/'+editKey).update({ text: txt }).then(() => {
+                closeModal();
+            });
         } else {
-            alert("කරුණාකර නිවැරදි තොරතුරු ඇතුළත් කරන්න.");
+            db.ref('stories').push({ uPh:myPh, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => {
+                closeModal();
+            });
         }
     }
 
-    // Gmail ලින්ක් එකෙන් එන විට ලොග් වීම තහවුරු කිරීම
-    window.onload = function() {
-        if (auth.isSignInWithEmailLink(window.location.href)) {
-            let email = window.localStorage.getItem('emailForSignIn');
-            if (!email) email = window.prompt('කරුණාකර ඔබගේ Email එක නැවත ලබා දෙන්න:');
-            
-            auth.signInWithEmailLink(email, window.location.href)
-                .then(() => {
-                    window.localStorage.removeItem('emailForSignIn');
-                    window.location.href = "main.html"; // සාමාන්‍ය පරිශීලකයා සඳහා පිටුව
-                });
+    function searchUsers() {
+        const q = document.getElementById('search-user').value.toLowerCase();
+        const res = document.getElementById('search-results');
+        if(q.length < 2) { res.innerHTML = ""; return; }
+
+        db.ref('users').once('value', snap => {
+            res.innerHTML = "";
+            snap.forEach(u => {
+                if(u.val().name.toLowerCase().includes(q) && u.key !== myPh) {
+                    res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;">
+                        <span>${u.val().name}</span>
+                        <button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button>
+                    </div>`;
+                }
+            });
+        });
+    }
+
+    function sendReq(to, toNm) {
+        db.ref('friends/'+to+'/'+myPh).set({status:'pending', name:myNm});
+        alert("Friend request sent to " + toNm);
+    }
+
+    function loadFriends() {
+        db.ref('friends/'+myPh).on('value', snap => {
+            const c = document.getElementById('cons'); c.innerHTML = "";
+            snap.forEach(f => {
+                const data = f.val();
+                if(data.status === 'accepted') {
+                    db.ref('users/'+f.key+'/pic').once('value', p => {
+                        const img = p.exists() ? p.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                        c.insertAdjacentHTML('beforeend', `
+                            <div class="card" onclick="openChat('${f.key}','${data.name}')" style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+                                <img src="${img}" class="p-img">
+                                <div><b>${data.name}</b><div style="font-size:10px; color:#888;">Tap to chat</div></div>
+                            </div>
+                        `);
+                    });
+                } else if(data.status === 'pending') {
+                    c.insertAdjacentHTML('afterbegin', `
+                        <div class="card" style="border:1px solid #f1c40f;">
+                            <p style="margin:0 0 10px 0; font-size:13px;">Friend Request: <b>${data.name}</b></p>
+                            <button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${data.name}')">Accept</button>
+                        </div>
+                    `);
+                }
+            });
+        });
+    }
+
+    function acc(ph, nm) {
+        db.ref('friends/'+myPh+'/'+ph).set({status:'accepted', name:nm});
+        db.ref('friends/'+ph+'/'+myPh).set({status:'accepted', name:myNm});
+    }
+
+    function openChat(ph, name) {
+        activeChatPh = ph; 
+        document.getElementById('chat-name').innerText = name;
+        document.getElementById('chat-window').classList.remove('hidden');
+        const cid = myPh < ph ? myPh+"_"+ph : ph+"_"+myPh;
+        db.ref('messages/'+cid).on('value', s => {
+            const mc = document.getElementById('msg-container'); mc.innerHTML = "";
+            s.forEach(m => {
+                const side = m.val().sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;';
+                mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px; word-wrap: break-word;">${formatText(m.val().msg)}</div>`;
+            });
+            mc.scrollTop = mc.scrollHeight;
+        });
+    }
+
+    function sendMsg() {
+        const msg = document.getElementById('msg-input').value.trim();
+        if(!msg) return;
+        const cid = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
+        db.ref('messages/'+cid).push({ sender: myPh, msg: msg, time: Date.now() });
+        document.getElementById('msg-input').value = "";
+    }
+
+    // Helpers
+    function pg(id, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    function openStoryModal() {
+        editKey = null; storyImgData = ""; 
+        document.getElementById('si').value = "";
+        document.getElementById('m-title').innerText = "New Post";
+        document.getElementById('img-field').classList.remove('hidden');
+        document.getElementById('sm').classList.remove('hidden');
+    }
+
+    function editStory(k) {
+        editKey = k;
+        document.getElementById('m-title').innerText = "Edit Post";
+        document.getElementById('si').value = rawStories[k];
+        document.getElementById('img-field').classList.add('hidden');
+        document.getElementById('sm').classList.remove('hidden');
+    }
+
+    function closeModal() { document.getElementById('sm').classList.add('hidden'); }
+    function closeChat() { document.getElementById('chat-window').classList.add('hidden'); activeChatPh = ""; }
+    function delStory(k) { if(confirm("Delete this story?")) db.ref('stories/'+k).remove(); }
+    function logout() { localStorage.clear(); location.reload(); }
+    function tgl() { 
+        document.getElementById('ud').classList.toggle('hidden');
+        const isReg = !document.getElementById('ud').classList.contains('hidden');
+        document.getElementById('tgl-btn').innerText = isReg ? "Already have an account? Login" : "Don't have an account? Create one";
+    }
+    function setNotice() { const m = prompt("Enter Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
+
+    // File Uploads
+    document.getElementById('p-pic-up').addEventListener('change', function(e) {
+        const f = e.target.files[0];
+        if(f){
+            const r = new FileReader();
+            r.onload=(ev)=>db.ref('users/'+myPh+'/pic').set(ev.target.result);
+            r.readAsDataURL(f);
         }
-    };
+    });
+
+    document.getElementById('bg-upload').addEventListener('change', function(e) {
+        const f = e.target.files[0];
+        if(f){
+            const r = new FileReader();
+            r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result);
+            r.readAsDataURL(f);
+        }
+    });
+
+    document.getElementById('img-input').addEventListener('change', function(e) {
+        const f = e.target.files[0];
+        if(f){
+            const r = new FileReader();
+            r.onload=(ev)=>storyImgData=ev.target.result;
+            r.readAsDataURL(f);
+        }
+    });
 </script>
+
 </body>
 </html>

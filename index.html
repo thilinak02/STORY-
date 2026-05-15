@@ -2,49 +2,62 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>STORY PRO - Verified Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STORY PRO - Admin Panel</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <style>
-        :root { --viber: #7360f2; --glass: rgba(255, 255, 255, 0.1); }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #000; color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .login-card { background: var(--glass); backdrop-filter: blur(15px); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); width: 90%; max-width: 360px; text-align: center; }
-        h2 { margin-bottom: 20px; font-size: 24px; letter-spacing: 2px; }
-        .welcome-text { color: var(--viber); font-weight: bold; margin-bottom: 15px; display: block; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 12px; border: 1px solid #333; background: rgba(0,0,0,0.5); color: white; outline: none; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--viber); color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .toggle-text { font-size: 12px; color: #aaa; margin-top: 15px; cursor: pointer; display: block; }
+        :root { --viber: #7360f2; --bg: #000; --card: #0a0a0a; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; }
+        .container { max-width: 500px; margin: auto; padding: 20px; }
+        
+        /* Login UI */
+        .login-box { background: var(--card); padding: 30px; border-radius: 20px; text-align: center; border: 1px solid #1a1a1a; margin-top: 50px; }
+        input, textarea { width: 100%; padding: 12px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #111; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--viber); color: white; font-weight: bold; cursor: pointer; }
+        
+        /* Admin Dashboard */
+        .admin-panel { display: none; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid #222; }
+        .story-card { background: var(--card); padding: 15px; border-radius: 15px; margin-top: 15px; border-left: 5px solid var(--viber); }
+        .delete-btn { background: #ff4444; width: auto; padding: 5px 15px; font-size: 12px; margin-top: 10px; }
         .hidden { display: none; }
-        .info-msg { font-size: 11px; color: #ffcc00; margin-bottom: 10px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
-<div class="login-card">
-    <h2>STORY PRO</h2>
-    <span class="welcome-text">WELCOME</span>
-
-    <div id="auth-form">
-        <input id="user-id" type="text" placeholder="Email හෝ Phone Number">
-        <input id="user-pw" type="password" placeholder="Password">
-        <button onclick="handleLogin()">Login</button>
-        <span class="toggle-text" onclick="toggleSignup()">අලුත් ගිණුමක් සාදන්න (Sign Up)</span>
+<div class="container">
+    <div id="login-section" class="login-box">
+        <h1>STORY PRO</h1>
+        <p style="color:var(--viber)">ADMIN ACCESS</p>
+        <input id="l-user" type="text" placeholder="Phone Number" value="0712729189">
+        <input id="l-pw" type="password" placeholder="Password">
+        <button onclick="handleLogin()">Enter Admin</button>
     </div>
 
-    <div id="signup-form" class="hidden">
-        <p class="info-msg">ගිණුම සෑදූ පසු ඔබගේ Gmail එකට ලැබෙන Link එක ක්ලික් කර එය තහවුරු කරන්න.</p>
-        <input id="reg-email" type="email" placeholder="ඔබගේ Gmail ලිපිනය">
-        <input id="reg-pw" type="password" placeholder="අලුත් Password එකක්">
-        <button onclick="handleSignup()" style="background: #444;">Verification Link එක යවන්න</button>
-        <span class="toggle-text" onclick="toggleSignup()">නැවත Login පිටුවට</span>
+    <div id="admin-panel" class="admin-panel">
+        <div class="header">
+            <h2>Admin Panel</h2>
+            <button onclick="logout()" style="width:auto; padding:5px 15px; background:#333;">Logout</button>
+        </div>
+
+        <div class="story-card">
+            <h3>නව කතාවක් ලියන්න</h3>
+            <input id="story-title" type="text" placeholder="කතාවේ මාතෘකාව">
+            <textarea id="story-content" rows="5" placeholder="කතාව මෙතන ලියන්න..."></textarea>
+            <button onclick="publishStory()">Publish Story</button>
+        </div>
+
+        <h3 style="margin-top:30px;">පවතින කතා (Manage Stories)</h3>
+        <div id="story-list">
+            </div>
     </div>
 </div>
 
 <script>
-    // ඔබේ අලුත් Firebase Config එක මෙන්න
+    // ඔබගේ Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
       authDomain: "story-ceca0.firebaseapp.com",
@@ -55,71 +68,78 @@
       appId: "1:820075788039:web:421fd811a4b4a3249a77a2"
     };
 
-    // Firebase Initialize කිරීම
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // Admin දත්ත
     const ADMIN_PH = "0712729189";
     const ADMIN_PW = "Thilinak9411@";
 
-    // 1. ලොගින් වීම
+    // ලොගින් පාලනය
     function handleLogin() {
-        const id = document.getElementById('user-id').value.trim();
-        const pw = document.getElementById('user-pw').value.trim();
+        const id = document.getElementById('l-user').value.trim();
+        const pw = document.getElementById('l-pw').value.trim();
 
-        if (!id || !pw) return alert("කරුණාකර තොරතුරු ඇතුළත් කරන්න.");
-
-        // Admin පරීක්ෂාව
         if (id === ADMIN_PH && pw === ADMIN_PW) {
-            localStorage.setItem("userRole", "admin");
-            alert("Welcome Admin!");
-            window.location.href = "index.html"; // සාර්ථක නම් යන පිටුව
-            return;
+            showAdminPanel();
+        } else {
+            alert("වැරදි දත්ත ඇතුළත් කළා!");
         }
-
-        // සාමාන්‍ය User ලොගින්
-        auth.signInWithEmailAndPassword(id, pw)
-            .then((userCredential) => {
-                if (userCredential.user.emailVerified) {
-                    localStorage.setItem("userRole", "user");
-                    window.location.href = "index.html";
-                } else {
-                    alert("කරුණාකර ඔබගේ Gmail එක පරීක්ෂා කර ලැබුණු Link එක ක්ලික් කරන්න.");
-                    auth.signOut();
-                }
-            })
-            .catch((error) => {
-                alert("වැරදියි: " + error.message);
-            });
     }
 
-    // 2. අලුත් ගිණුමක් සෑදීම
-    function handleSignup() {
-        const email = document.getElementById('reg-email').value.trim();
-        const pw = document.getElementById('reg-pw').value.trim();
-
-        if (!email || pw.length < 6) return alert("නිවැරදි Gmail ලිපිනයක් සහ අකුරු 6කට වැඩි Password එකක් ඇතුළත් කරන්න.");
-
-        auth.createUserWithEmailAndPassword(email, pw)
-            .then((userCredential) => {
-                userCredential.user.sendEmailVerification().then(() => {
-                    alert("තහවුරු කිරීමේ Link එක ඔබගේ Gmail එකට යැව්වා. එය ක්ලික් කර නැවත ලොග් වන්න.");
-                    auth.signOut();
-                    toggleSignup();
-                });
-            })
-            .catch((error) => {
-                alert("ගිණුම සෑදිය නොහැක: " + error.message);
-            });
+    function showAdminPanel() {
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('admin-panel').style.display = 'block';
+        loadStories();
     }
 
-    function toggleSignup() {
-        document.getElementById('auth-form').classList.toggle('hidden');
-        document.getElementById('signup-form').classList.toggle('hidden');
+    // කතාවක් Publish කිරීම (Database එකට දැමීම)
+    function publishStory() {
+        const title = document.getElementById('story-title').value.trim();
+        const content = document.getElementById('story-content').value.trim();
+
+        if (!title || !content) return alert("මාතෘකාව සහ කතාව ඇතුළත් කරන්න!");
+
+        const storyId = db.ref('stories').push().key;
+        db.ref('stories/' + storyId).set({
+            id: storyId,
+            title: title,
+            content: content,
+            date: new Date().toLocaleDateString()
+        }).then(() => {
+            alert("කතාව සාර්ථකව පල කළා!");
+            document.getElementById('story-title').value = "";
+            document.getElementById('story-content').value = "";
+        });
+    }
+
+    // සියලුම කතා Load කිරීම
+    function loadStories() {
+        db.ref('stories').on('value', (snapshot) => {
+            const list = document.getElementById('story-list');
+            list.innerHTML = "";
+            snapshot.forEach((child) => {
+                const data = child.val();
+                list.innerHTML += `
+                    <div class="story-card">
+                        <h4>${data.title}</h4>
+                        <p style="font-size:13px; color:#aaa;">${data.content.substring(0, 50)}...</p>
+                        <button class="delete-btn" onclick="deleteStory('${data.id}')">Delete Story</button>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    // කතාවක් මැකීම
+    function deleteStory(id) {
+        if (confirm("මෙම කතාව මැකීමට ඔබට සහතිකද?")) {
+            db.ref('stories/' + id).remove();
+        }
+    }
+
+    function logout() {
+        location.reload();
     }
 </script>
 

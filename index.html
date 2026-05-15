@@ -91,7 +91,10 @@ input, button, textarea { border-radius: 20px; border: 1px solid #444; padding: 
 </div>
 
 <script>
-const firebaseConfig = { databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com" };
+const firebaseConfig = { 
+    databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com" 
+    // මෙතනට ඔබේ apiKey එක ඇතුළත් කිරීමට අමතක නොකරන්න
+};
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
@@ -126,7 +129,6 @@ function setLoginType(type) {
 function authMe() {
     const p = document.getElementById('ap').value, s = document.getElementById('as').value;
     
-    // Admin Login Logic
     if(loginMode === 'admin') {
         if(p === ADMIN_PH && s === ADMIN_PW) {
             localStorage.setItem("ph", p); localStorage.setItem("nm", "Admin"); location.reload();
@@ -134,9 +136,7 @@ function authMe() {
         return;
     }
 
-    // Gmail OTP/Login Logic
     if(!document.getElementById('ud').classList.contains('hidden')) {
-        // Registration
         const n = document.getElementById('au').value;
         if(!n) { alert("Please enter username"); return; }
         auth.createUserWithEmailAndPassword(p, s).then(res => {
@@ -147,7 +147,6 @@ function authMe() {
             });
         }).catch(e => alert(e.message));
     } else {
-        // Simple Login
         auth.signInWithEmailAndPassword(p, s).then(res => {
             db.ref('users/'+p.replace(/\./g, ',')).once('value', v => {
                 localStorage.setItem("ph", p.replace(/\./g, ','));

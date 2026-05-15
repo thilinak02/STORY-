@@ -1,508 +1,341 @@
-
 <!DOCTYPE html>
-
 <html lang="si">
-
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STORY PRO - Master Edition</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 
-<meta charset="UTF-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-<title>STORY PRO - Master Edition</title>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<style>
-
-:root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.75); }
-
-/* මුළු පිටුවම scroll වීමට ඉඩ ලබා දුන්නා */
-
-body { font-family: sans-serif; margin: 0; background: #000 no-repeat center center fixed; background-size: cover; color: white; min-height: 100vh; transition: 0.5s; overflow-x: hidden; }
-
-.content-wrap { min-height: 100vh; display: flex; flex-direction: column; }
-
-.hidden { display: none !important; }
-
-header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; position: sticky; top: 0; }
-
-#notice-bar { background: #f1c40f; color: #000; padding: 10px; font-size: 13px; font-weight: bold; text-align: center; border-bottom: 2px solid #d35400; display: none; }
-
-/* Page එක ඇතුළේ Scroll හිරවීම වැළැක්වීමට මෙහි height එක ඉවත් කළා */
-
-.page { flex: 1; padding-bottom: 90px; }
-
-.card { background: var(--glass); backdrop-filter: blur(10px); padding: 15px; margin: 10px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative; }
-
-.story-img { width: 100%; border-radius: 10px; margin-top: 10px; display: block; }
-
-.nav-bar { background: #000; display: flex; height: 70px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #333; z-index: 100; }
-
-.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #aaa; cursor: pointer; }
-
-.nav-item.active { color: white; font-weight: bold; }
-
-input, button, textarea { border-radius: 20px; border: 1px solid #444; padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; background: #222; color: white; outline: none; }
-
-#chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
-
-.fr-btn { width: auto; padding: 4px 10px; font-size: 10px; background: #3498db; border: none; border-radius: 10px; cursor: pointer; color: white; }
-
-.p-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #333; }
-
-/* See More link එකේ පෙනුම */
-
-.see-more { color: #3498db; cursor: pointer; font-weight: bold; margin-left: 5px; text-decoration: underline; }
-
-</style>
-
+    <style>
+        :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.75); --accent: #00d2ff; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #000 no-repeat center center fixed; background-size: cover; color: white; min-height: 100vh; overflow-x: hidden; transition: 0.5s; }
+        .content-wrap { min-height: 100vh; display: flex; flex-direction: column; }
+        .hidden { display: none !important; }
+        
+        header { background: var(--viber); padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; position: sticky; top: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        #notice-bar { background: #f1c40f; color: #000; padding: 10px; font-size: 13px; font-weight: bold; text-align: center; border-bottom: 2px solid #d35400; display: none; }
+        
+        .page { flex: 1; padding-bottom: 90px; }
+        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 15px; margin: 12px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); }
+        
+        /* Modern Chat List & Search Style */
+        .chat-item { display: flex; align-items: center; gap: 15px; padding: 12px; margin: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 15px; cursor: pointer; border-left: 4px solid transparent; transition: 0.2s; }
+        .chat-item:active { background: rgba(255,255,255,0.1); transform: scale(0.98); }
+        
+        .p-img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #333; border: 1px solid rgba(255,255,255,0.2); }
+        .nav-bar { background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); display: flex; height: 70px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #222; z-index: 100; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #777; cursor: pointer; }
+        .nav-item.active { color: white; font-weight: bold; }
+        
+        input, button, textarea { border-radius: 15px; border: 1px solid #333; padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; background: #111; color: white; outline: none; }
+        .google-btn { background: white; color: black; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; cursor: pointer; }
+        
+        #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
+        .msg-bubble { padding: 10px 15px; border-radius: 18px; margin: 5px; max-width: 80%; font-size: 15px; line-height: 1.4; }
+    </style>
 </head>
-
 <body>
 
 <div class="content-wrap">
+    <!-- Login Page -->
+    <div id="auth-page" class="hidden" style="padding:40px; display: flex; flex-direction: column; justify-content: center; min-height: 100vh;">
+        <div class="card" style="text-align: center;">
+            <h2 style="margin-bottom: 25px;">STORY PRO</h2>
+            
+            <!-- Admin Login Section -->
+            <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 15px; border: 1px solid #222;">
+                <p style="font-size: 11px; color: #7360f2; margin: 0 0 10px 0; text-transform: uppercase;">Admin Portal</p>
+                <input id="admin-ph" type="tel" placeholder="Phone Number">
+                <input id="admin-pw" type="password" placeholder="Password">
+                <button onclick="loginAsAdmin()" style="background: #222; border: 1px solid #7360f2; margin-top: 10px;">Enter Admin</button>
+            </div>
 
-<div id="main-app" class="hidden" style="display:flex; flex-direction:column;">
+            <div style="margin: 20px; color: #444; font-size: 12px;">OR USER LOGIN</div>
 
-<header>
+            <!-- Google Login -->
+            <button class="google-btn" onclick="loginWithGoogle()" style="padding: 12px; border-radius: 25px;">
+                <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" width="20"> Continue with Gmail
+            </button>
+        </div>
+    </div>
 
-<div style="display:flex; align-items:center; gap:8px;">
+    <!-- Main App -->
+    <div id="main-app" class="hidden">
+        <header>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <img id="my-p-img" src="" class="p-img" style="width:30px; height:30px;">
+                <b id="myn">User</b>
+                <!-- Admin Tools -->
+                <div id="adm-area" class="hidden" style="display:flex; gap:5px; margin-left: 10px;">
+                    <label for="bg-upload" style="background:red; font-size:9px; padding:4px 8px; border-radius:5px; cursor:pointer;">BG</label>
+                    <button onclick="setNotice()" style="background:orange; font-size:9px; padding:4px 8px; border-radius:5px; width:auto; border:none; margin:0; color:black;">NOTICE</button>
+                    <input type="file" id="bg-upload" class="hidden">
+                </div>
+            </div>
+            <button onclick="logout()" style="width:auto; padding:5px 10px; background:none; border:1px solid #fff; font-size:10px; border-radius: 8px;">Logout</button>
+        </header>
 
-<label for="p-pic-up" style="cursor:pointer;">
+        <div id="notice-bar"></div>
 
-<img id="my-p-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="p-img" style="border:1px solid white; width:30px; height:30px;">
+        <!-- Chats & Search Page -->
+        <div id="p-chats" class="page">
+            <div style="padding: 10px;">
+                <input type="text" id="search-input" placeholder="🔍 Search users by name..." onkeyup="searchUsers()">
+                <div id="search-results" style="margin-top: 10px;"></div>
+            </div>
+            <h4 style="margin:15px; color: #777; font-size: 12px; text-transform: uppercase;">Messages</h4>
+            <div id="cons"></div>
+        </div>
 
-</label>
+        <!-- Feed Page -->
+        <div id="p-stories" class="page hidden">
+            <h4 style="margin:15px;">Feed</h4>
+            <div id="feed"></div>
+        </div>
 
-<input type="file" id="p-pic-up" class="hidden" accept="image/*">
-
-<b id="myn">Story Pro</b>
-
-<div id="adm-area" class="hidden" style="display:flex; gap:5px;">
-
-<label for="bg-upload" style="background:red; font-size:9px; padding:3px 6px; border-radius:5px; cursor:pointer;">BG</label>
-
-<button onclick="setNotice()" style="background:orange; font-size:9px; padding:3px 6px; border-radius:5px; width:auto; border:none; margin:0; color:black;">NOTICE</button>
-
-<input type="file" id="bg-upload" accept="image/*" class="hidden">
-
+        <nav class="nav-bar">
+            <div class="nav-item active" onclick="pg('p-chats',this)"><span>💬</span><span>Chats</span></div>
+            <div class="nav-item" onclick="pg('p-stories',this)"><span>📖</span><span>Stories</span></div>
+            <div class="nav-item" onclick="openStoryModal()"><span>➕</span><span>Post</span></div>
+        </nav>
+    </div>
 </div>
 
-</div>
-
-<button onclick="logout()" style="width:auto; padding:4px 8px; background:none; border:1px solid #fff; font-size:10px;">Logout</button>
-
-</header>
-
-<div id="notice-bar"></div>
-
-<div id="p-chats" class="page">
-
-<div style="padding: 10px;">
-
-<input type="text" id="search-user" placeholder="Search friends by name..." onkeyup="searchUsers()">
-
-<div id="search-results"></div>
-
-</div>
-
-<h4 style="margin:15px;">Messages</h4>
-
-<div id="cons"></div>
-
-</div>
-
-<div id="p-stories" class="page hidden"><h4 style="margin:15px;">Feed</h4><div id="feed"></div></div>
-
-<div class="nav-bar">
-
-<div class="nav-item active" onclick="pg('p-chats',this)">💬 Chats</div>
-
-<div class="nav-item" onclick="pg('p-stories',this)">📖 Stories</div>
-
-<div class="nav-item" onclick="openStoryModal()">➕ Post</div>
-
-</div>
-
-</div>
-
-<div id="auth-page" class="hidden" style="padding:40px;">
-
-<div class="card">
-
-<h2 style="text-align:center;">Login</h2>
-
-<input id="ap" type="tel" placeholder="Phone Number">
-
-<input id="as" type="password" placeholder="Password">
-
-<div id="ud" class="hidden"><input id="au" placeholder="Username"></div>
-
-<button onclick="authMe()" style="background:var(--viber); border:none; font-weight:bold;">ENTER</button>
-
-<p onclick="tgl()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa;">Create Account</p>
-
-</div>
-
-</div>
-
-</div>
-
-<div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; padding:20px; box-sizing:border-box; overflow-y: auto;">
-
-<h3 id="m-title">New Post</h3>
-
-<textarea id="si" placeholder="Write... (**bold**)" rows="6"></textarea>
-
-<div id="img-field"><input type="file" id="img-input" accept="image/*"></div>
-
-<button id="post-btn" onclick="postStory()" style="background:var(--viber); border:none;">Post Now</button>
-
-<button onclick="history.back()" style="background:#444; border:none;">Cancel</button>
-
-</div>
-
+<!-- Chat Window -->
 <div id="chat-window" class="hidden">
-
-<header><span onclick="history.back()" style="font-size:24px;">⬅</span> <b id="chat-name">User</b></header>
-
-<div id="msg-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column;"></div>
-
-<div style="padding:10px; display:flex; gap:5px; background:#111;">
-
-<input id="msg-input" placeholder="Type...">
-
-<button onclick="sendMsg()" style="width:auto; background:var(--viber); border:none;">Send</button>
-
+    <header>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <span onclick="history.back()" style="font-size:24px; cursor:pointer;">←</span>
+            <img id="chat-p-img" src="" class="p-img" style="width:30px; height:30px;">
+            <b id="chat-name">Chat</b>
+        </div>
+    </header>
+    <div id="msg-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column;"></div>
+    <div style="padding:10px; display:flex; gap:5px; background:#111;">
+        <input id="msg-input" placeholder="Type a message...">
+        <button onclick="sendMsg()" style="width:auto; background:var(--viber); border:none; padding: 0 20px;">Send</button>
+    </div>
 </div>
 
+<!-- Post Modal -->
+<div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; padding:20px; box-sizing:border-box;">
+    <h3>New Story</h3>
+    <textarea id="si" placeholder="Write something... (**bold**)" rows="6"></textarea>
+    <input type="file" id="img-input" accept="image/*">
+    <button onclick="postStory()" style="background:var(--viber); border:none; font-weight:bold; margin-top: 10px;">Post Now</button>
+    <button onclick="history.back()" style="background:#222; border:none; color: #777;">Cancel</button>
 </div>
 
 <script>
-
-const firebaseConfig = { databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com" };
-
+// --- CONFIGURATION ---
+const firebaseConfig = {
+    databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com"
+};
 firebase.initializeApp(firebaseConfig);
-
 const db = firebase.database();
+const auth = firebase.auth();
+const provider = new firebase.auth.GoogleAuthProvider();
 
+// Admin Setup
 const ADMIN_PH = "0712729189";
-
 const ADMIN_PW = "Thilinak9411@";
 
-const NOTIF_SOUND = new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3");
+let myPh = "", myNm = "", myPic = "", activeChatPh = "", storyImgData = "";
 
-let myPh = localStorage.getItem("ph") || "", myNm = localStorage.getItem("nm") || "", activeChatPh = "", editKey = null, storyImgData = "";
+// --- AUTH LOGIC ---
+auth.onAuthStateChanged(user => {
+    const role = localStorage.getItem("userRole");
+    if (user && role === "user") {
+        myPh = user.uid; myNm = user.displayName; myPic = user.photoURL;
+        syncUser(); startApp();
+    } else if (role === "admin") {
+        myPh = localStorage.getItem("ph"); myNm = localStorage.getItem("nm");
+        myPic = "https://cdn-icons-png.flaticon.com/512/6024/6024190.png";
+        startApp();
+    } else {
+        document.getElementById('auth-page').classList.remove('hidden');
+    }
+});
 
-window.onload = () => { syncApp(); if(myPh) { start(); listenMsgs(); } else { document.getElementById('auth-page').classList.remove('hidden'); } };
-
-window.onpopstate = () => { document.getElementById('sm').classList.add('hidden'); document.getElementById('chat-window').classList.add('hidden'); };
-
-function formatText(t) { 
-
-if(!t) return "";
-
-return t.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); 
-
+function loginAsAdmin() {
+    const p = document.getElementById('admin-ph').value;
+    const s = document.getElementById('admin-pw').value;
+    if (p === ADMIN_PH && s === ADMIN_PW) {
+        localStorage.setItem("userRole", "admin");
+        localStorage.setItem("ph", p); localStorage.setItem("nm", "Admin");
+        location.reload();
+    } else { alert("Admin details incorrect!"); }
 }
 
-// See More Logic
-
-let rawStories = {}; 
-
-function truncateText(text, limit, key) {
-
-if (text.length > limit) {
-
-return text.substring(0, limit) + `... <span class="see-more" onclick="showFullText('${key}')">See More</span>`;
-
+function loginWithGoogle() {
+    localStorage.setItem("userRole", "user");
+    auth.signInWithPopup(provider).catch(e => alert(e.message));
 }
 
-return text;
-
+function syncUser() {
+    db.ref('users/' + myPh).update({ name: myNm, pic: myPic, lastSeen: Date.now() });
 }
 
-function showFullText(key) {
-
-const el = document.getElementById('story-text-' + key);
-
-if(el && rawStories[key]) {
-
-el.innerHTML = formatText(rawStories[key]);
-
-}
-
+function startApp() {
+    document.getElementById('auth-page').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    document.getElementById('myn').innerText = myNm;
+    document.getElementById('my-p-img').src = myPic;
+    if(localStorage.getItem("userRole") === "admin") document.getElementById('adm-area').classList.remove('hidden');
+    
+    loadStories(); loadFriends(); syncApp();
 }
 
 function syncApp() {
-
-db.ref('appConfig/bgImage').on('value', snap => { if(snap.exists()) document.body.style.backgroundImage = `url('${snap.val()}')`; });
-
-db.ref('appConfig/notice').on('value', snap => {
-
-const bar = document.getElementById('notice-bar');
-
-if(snap.exists() && snap.val().trim() !== "") { bar.innerHTML = "📢 " + formatText(snap.val()); bar.style.display = "block"; } 
-
-else { bar.style.display = "none"; }
-
-});
-
+    db.ref('appConfig/bgImage').on('value', s => { if(s.exists()) document.body.style.backgroundImage = `url('${s.val()}')`; });
+    db.ref('appConfig/notice').on('value', s => {
+        const bar = document.getElementById('notice-bar');
+        if(s.exists() && s.val()) { bar.innerText = "📢 " + s.val(); bar.style.display = "block"; } 
+        else { bar.style.display = "none"; }
+    });
 }
 
-function listenMsgs() {
+// --- SEARCH & FRIENDS ---
+function searchUsers() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    const res = document.getElementById('search-results');
+    res.innerHTML = "";
+    if(q.length < 2) return;
 
-db.ref('messages').on('child_added', (chatSnap) => {
-
-if (chatSnap.key.includes(myPh)) {
-
-db.ref('messages/' + chatSnap.key).limitToLast(1).on('child_added', (msgSnap) => {
-
-const m = msgSnap.val();
-
-if (m.sender !== myPh && m.time > (Date.now() - 3000)) {
-
-NOTIF_SOUND.play().catch(()=>{});
-
-if (activeChatPh === "" && Notification.permission === "granted") new Notification("New Message", { body: m.msg });
-
+    db.ref('users').orderByChild('name').startAt(q).limitToFirst(5).once('value', snap => {
+        snap.forEach(u => {
+            if(u.key === myPh) return;
+            const user = u.val();
+            res.innerHTML += `
+                <div class="chat-item">
+                    <img src="${user.pic}" class="p-img">
+                    <div style="flex:1;"><b>${user.name}</b></div>
+                    <button onclick="sendReq('${u.key}','${user.name}','${user.pic}')" style="width:auto; padding:5px 12px; background:var(--viber); border:none; font-size:11px;">Add</button>
+                </div>`;
+        });
+    });
 }
 
-});
-
+function sendReq(ph, nm, pic) {
+    db.ref('friends/' + ph + '/' + myPh).set({ status: 'pending', name: myNm, pic: myPic });
+    alert("Request sent to " + nm);
 }
-
-});
-
-}
-
-function authMe() {
-
-const p = document.getElementById('ap').value, s = document.getElementById('as').value;
-
-if(p === ADMIN_PH && s === ADMIN_PW) {
-
-localStorage.setItem("ph", p); localStorage.setItem("nm", "Admin"); location.reload(); return;
-
-}
-
-db.ref('users/'+p).once('value', v => {
-
-if(v.exists() && v.val().pass == s) { localStorage.setItem("ph",p); localStorage.setItem("nm",v.val().name); location.reload(); }
-
-else if(!v.exists() && !document.getElementById('ud').classList.contains('hidden')) {
-
-const n = document.getElementById('au').value;
-
-if(n) db.ref('users/'+p).set({pass:s, name:n}).then(()=> { localStorage.setItem("ph",p); localStorage.setItem("nm",n); location.reload(); });
-
-} else alert("වැරදියි!");
-
-});
-
-}
-
-function start() {
-
-document.getElementById('auth-page').classList.add('hidden');
-
-document.getElementById('main-app').classList.remove('hidden');
-
-document.getElementById('myn').innerText = "Hi, " + myNm;
-
-if(myPh === ADMIN_PH) document.getElementById('adm-area').classList.remove('hidden');
-
-db.ref('users/'+myPh+'/pic').on('value', snap => {
-
-if(snap.exists()) document.getElementById('my-p-img').src = snap.val();
-
-});
-
-loadStories(); loadFriends();
-
-if(Notification.permission !== "granted") Notification.requestPermission();
-
-}
-
-function loadStories() {
-
-db.ref('stories').on('value', snap => {
-
-const feed = document.getElementById('feed'); feed.innerHTML = "";
-
-snap.forEach(x => {
-
-const s = x.val(); const can = (s.uPh === myPh || myPh === ADMIN_PH);
-
-rawStories[x.key] = s.text; 
-
-// අකුරු 150 කට වඩා වැඩි නම් See More පෙන්වයි
-
-const displayTxt = truncateText(s.text, 150, x.key);
-
-feed.insertAdjacentHTML('afterbegin', `<div class="card">
-
-<div style="display:flex; justify-content:space-between;"><b>${s.user}</b>${s.uPh!==myPh?`<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>`:''}</div>
-
-<div id="story-text-${x.key}" style="margin:10px 0; white-space: pre-wrap;">${formatText(displayTxt)}</div>
-
-${s.img?`<img src="${s.img}" class="story-img">`:''}
-
-${can ? `<div style="text-align:right; margin-top:5px;"><span onclick="editStory('${x.key}','${s.text.replace(/'/g, "\\'")}')" style="color:#3498db; cursor:pointer;">✏️</span> <span onclick="delStory('${x.key}')" style="color:#ff4757; cursor:pointer; margin-left:10px;">🗑️</span></div>`:''}
-
-</div>`);
-
-});
-
-});
-
-}
-
-function postStory() {
-
-const txt = document.getElementById('si').value;
-
-if(editKey) {
-
-db.ref('stories/'+editKey).update({ text: txt }).then(() => {
-
-editKey = null;
-
-document.getElementById('sm').classList.add('hidden');
-
-history.back();
-
-});
-
-} else {
-
-db.ref('stories').push({ uPh:myPh, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => {
-
-document.getElementById('sm').classList.add('hidden');
-
-history.back();
-
-});
-
-}
-
-}
-
-function editStory(k, t) { editKey = k; document.getElementById('m-title').innerText = "Edit"; document.getElementById('si').value = t; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); history.pushState({v:'m'}, ''); }
-
-function delStory(k) { if(confirm("Delete?")) db.ref('stories/'+k).remove(); }
-
-function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myPh).set({status:'pending', name:myNm}); alert("Sent to " + toNm); }
 
 function loadFriends() {
-
-db.ref('friends/'+myPh).on('value', snap => {
-
-const c = document.getElementById('cons'); c.innerHTML = "";
-
-snap.forEach(f => {
-
-if(f.val().status==='accepted') {
-
-db.ref('users/'+f.key+'/pic').once('value', p => {
-
-const img = p.exists() ? p.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-
-c.insertAdjacentHTML('beforeend', `<div class="card" onclick="openChat('${f.key}','${f.val().name}')" style="display:flex; align-items:center; gap:12px;">
-
-<img src="${img}" class="p-img">
-
-<div><b>${f.val().name}</b><div style="font-size:10px; color:gray;">Tap to chat</div></div>
-
-</div>`);
-
-});
-
+    db.ref('friends/' + myPh).on('value', snap => {
+        const c = document.getElementById('cons'); c.innerHTML = "";
+        snap.forEach(f => {
+            const d = f.val();
+            if(d.status === 'accepted') {
+                c.innerHTML += `
+                    <div class="chat-item" onclick="openChat('${f.key}','${d.name}','${d.pic}')">
+                        <img src="${d.pic}" class="p-img">
+                        <div><b>${d.name}</b><div style="font-size:10px; color:gray;">Tap to chat</div></div>
+                    </div>`;
+            } else if(d.status === 'pending') {
+                c.innerHTML += `
+                    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:13px;">Req from: <b>${d.name}</b></span>
+                        <button onclick="acc('${f.key}','${d.name}','${d.pic}')" style="width:auto; background:#2ecc71; border:none; padding:5px 10px;">Accept</button>
+                    </div>`;
+            }
+        });
+    });
 }
 
-else if(f.val().status==='pending') {
-
-c.insertAdjacentHTML('afterbegin', `<div class="card">Req: ${f.val().name} <button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${f.val().name}')">Accept</button></div>`);
-
+function acc(ph, nm, pic) {
+    db.ref('friends/' + myPh + '/' + ph).set({ status: 'accepted', name: nm, pic: pic });
+    db.ref('friends/' + ph + '/' + myPh).set({ status: 'accepted', name: myNm, pic: myPic });
 }
 
-});
+// --- CHAT SYSTEM ---
+function openChat(ph, name, pic) {
+    activeChatPh = ph;
+    document.getElementById('chat-name').innerText = name;
+    document.getElementById('chat-p-img').src = pic;
+    document.getElementById('chat-window').classList.remove('hidden');
+    history.pushState({v:'c'}, '');
 
-});
-
-}
-
-function acc(ph, nm) { db.ref('friends/'+myPh+'/'+ph).set({status:'accepted', name:nm}); db.ref('friends/'+ph+'/'+myPh).set({status:'accepted', name:myNm}); }
-
-function openChat(ph, name) {
-
-activeChatPh = ph; document.getElementById('chat-name').innerText = name;
-
-document.getElementById('chat-window').classList.remove('hidden'); history.pushState({v:'c'}, '');
-
-const cid = myPh < ph ? myPh+"_"+ph : ph+"_"+myPh;
-
-db.ref('messages/'+cid).on('value', s => {
-
-const mc = document.getElementById('msg-container'); mc.innerHTML = "";
-
-s.forEach(m => {
-
-const side = m.val().sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;';
-
-mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%;">${formatText(m.val().msg)}</div>`;
-
-});
-
-mc.scrollTop = mc.scrollHeight;
-
-});
-
+    const cid = myPh < ph ? myPh+"_"+ph : ph+"_"+myPh;
+    db.ref('messages/'+cid).on('value', s => {
+        const mc = document.getElementById('msg-container'); mc.innerHTML = "";
+        s.forEach(m => {
+            const msg = m.val();
+            const side = msg.sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#222;';
+            mc.innerHTML += `<div class="msg-bubble" style="${side}">${msg.text}</div>`;
+        });
+        mc.scrollTop = mc.scrollHeight;
+    });
 }
 
 function sendMsg() {
-
-const msg = document.getElementById('msg-input').value; if(!msg.trim()) return;
-
-const cid = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
-
-db.ref('messages/'+cid).push({ sender: myPh, msg: msg, time: Date.now() });
-
-document.getElementById('msg-input').value = "";
-
+    const inp = document.getElementById('msg-input');
+    if(!inp.value.trim()) return;
+    const cid = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
+    db.ref('messages/'+cid).push({ sender: myPh, text: inp.value, time: Date.now() });
+    inp.value = "";
 }
 
-function setNotice() { const m = prompt("Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
-
-function logout() { localStorage.clear(); location.reload(); }
-
-function tgl() { document.getElementById('ud').classList.remove('hidden'); }
-
-function pg(id, el) { 
-
-document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); 
-
-document.getElementById(id).classList.remove('hidden'); 
-
-document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); 
-
-el.classList.add('active'); 
-
-if(id==='p-chats') { activeChatPh=""; document.getElementById('search-user').value=""; document.getElementById('search-results').innerHTML=""; }
-
+// --- STORIES & UTILS ---
+function loadStories() {
+    db.ref('stories').on('value', snap => {
+        const f = document.getElementById('feed'); f.innerHTML = "";
+        snap.forEach(x => {
+            const s = x.val();
+            f.insertAdjacentHTML('afterbegin', `
+                <div class="card">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                        <img src="${s.uPic || ''}" style="width:30px; height:30px; border-radius:50%;">
+                        <b>${s.user}</b>
+                    </div>
+                    <div style="white-space:pre-wrap;">${s.text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')}</div>
+                    ${s.img ? `<img src="${s.img}" class="story-img" style="width:100%; border-radius:10px; margin-top:10px;">` : ''}
+                </div>`);
+        });
+    });
 }
 
-function openStoryModal() { editKey = null; storyImgData = ""; document.getElementById('si').value = ""; document.getElementById('img-field').classList.remove('hidden'); document.getElementById('sm').classList.remove('hidden'); history.pushState({v:'m'}, ''); }
+function postStory() {
+    const txt = document.getElementById('si').value;
+    if(!txt.trim() && !storyImgData) return;
+    db.ref('stories').push({ uPh:myPh, user:myNm, uPic:myPic, text:txt, img:storyImgData, time:Date.now() })
+    .then(() => { document.getElementById('sm').classList.add('hidden'); history.back(); });
+}
 
-document.getElementById('bg-upload').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); } });
+function logout() { localStorage.clear(); auth.signOut().then(() => location.reload()); }
 
-document.getElementById('img-input').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>storyImgData=ev.target.result; r.readAsDataURL(f); } });
+function pg(id, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+}
 
+function openStoryModal() {
+    storyImgData = ""; document.getElementById('si').value = "";
+    document.getElementById('sm').classList.remove('hidden');
+    history.pushState({v:'m'}, '');
+}
+
+function setNotice() { const m = prompt("New Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
+
+document.getElementById('img-input').addEventListener('change', function(e) {
+    const f = e.target.files[0];
+    if(f){ const r = new FileReader(); r.onload=(ev)=>storyImgData=ev.target.result; r.readAsDataURL(f); }
+});
+
+document.getElementById('bg-upload').addEventListener('change', function(e) {
+    const f = e.target.files[0];
+    if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); }
+});
+
+window.onpopstate = () => {
+    document.getElementById('sm').classList.add('hidden');
+    document.getElementById('chat-window').classList.add('hidden');
+};
 </script>
-
 </body>
-
 </html>

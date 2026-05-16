@@ -32,6 +32,8 @@
         .fr-btn { width: auto; padding: 6px 12px; font-size: 11px; background: #3498db; border: none; border-radius: 10px; color: white; }
         .p-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #333; border: 1px solid #444; }
         .see-more { color: #3498db; cursor: pointer; font-weight: bold; margin-left: 5px; }
+        .auth-link { text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:15px; }
+        .auth-link b { color: var(--viber); }
     </style>
 </head>
 <body>
@@ -47,7 +49,10 @@
             <input id="login-pwd" type="password" placeholder="Enter Password">
             
             <button onclick="loginWithEmailPwd()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">LOGIN</button>
-            <p onclick="showRegisterView()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:20px;">First time here? <b>Register Account</b></p>
+            
+            <p onclick="showForgotPwdView()" style="text-align:center; font-size:12px; cursor:pointer; color:#e74c3c; margin-top:15px; font-weight:bold;">Forgot Password?</p>
+            
+            <p onclick="showRegisterView()" class="auth-link">First time here? <b>Register Account</b></p>
         </div>
 
         <div class="card hidden" id="register-section">
@@ -59,7 +64,17 @@
             <input id="reg-pwd" type="password" placeholder="Create a Password (Min 6 chars)">
             
             <button onclick="registerWithVerification()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">REGISTER ACCOUNT</button>
-            <p onclick="showLoginView()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:20px;">Already have an account? <b>Login</b></p>
+            <p onclick="showLoginView()" class="auth-link">Already have an account? <b>Login</b></p>
+        </div>
+
+        <div class="card hidden" id="forgot-pwd-section">
+            <h3 style="text-align:center; margin-top:0;">Reset Password</h3>
+            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Enter your Gmail address below. We will send you a secure link to reset your password.</p>
+            
+            <input id="forgot-email" type="email" placeholder="Enter your Gmail address">
+            
+            <button onclick="sendPasswordReset()" style="background:#e67e22; border:none; font-weight:bold; margin-top:15px;">SEND RESET LINK</button>
+            <p onclick="showLoginView()" class="auth-link">Back to <b>Login</b></p>
         </div>
     </div>
 
@@ -158,7 +173,6 @@
     window.onload = () => {
         syncApp();
         
-        // ඇප් එකට එනකොට කලින් ලොග් වෙලා ඉන්නවද සහ ඊමේල් එක වෙරිෆයිඩ් ද බලනවා
         auth.onAuthStateChanged((user) => {
             if (user) {
                 if (user.emailVerified || user.email === ADMIN_EMAIL) {
@@ -173,7 +187,6 @@
                         }
                     });
                 } else {
-                    // ලින්ක් එක ක්ලික් කරලා නැත්නම් ඇතුලට ගන්නෑ
                     alert("කරුණාකර ඔබගේ Gmail ලිපිනයට පැමිණි Verification ලින්ක් එක ක්ලික් කර ගිණුම තහවුරු කරන්න.");
                     auth.signOut();
                     showLoginView();
@@ -204,7 +217,7 @@
         });
     }
 
-    // 1. LOGIN SYSTEM
+    // LOGIN SYSTEM
     function loginWithEmailPwd() {
         const email = document.getElementById('login-email').value.trim().toLowerCase();
         const pwd = document.getElementById('login-pwd').value.trim();
@@ -237,7 +250,7 @@
             });
     }
 
-    // 2. REGISTER SYSTEM WITH VERIFICATION LINK (හොර එකවුන්ට් වළකන ක්‍රමය)
+    // REGISTER SYSTEM
     function registerWithVerification() {
         const email = document.getElementById('reg-email').value.trim().toLowerCase();
         const name = document.getElementById('reg-name').value.trim();
@@ -248,22 +261,18 @@
 
         const encodedEmail = btoa(email).replace(/=/g, "");
 
-        // ඩේටාබේස් එකේ දැනටමත් ඉන්නවද බලනවා
         db.ref('users/' + encodedEmail).once('value', snap => {
             if (snap.exists()) {
                 alert("මේ Gmail ලිපිනයෙන් දැනටමත් ගිණුමක් සාදා ඇත. කරුණාකර Login වෙන්න.");
                 showLoginView();
             } else {
-                // Firebase එකේ Account එක හදනවා
                 auth.createUserWithEmailAndPassword(email, pwd)
                     .then((userCredential) => {
-                        // එකවුන්ට් එක හැදූ සැනින් සත්‍ය Gmail එකදැයි බලන්න ලින්ක් එකක් යවනවා
                         userCredential.user.sendEmailVerification()
                             .then(() => {
                                 const isAdmin = (email === ADMIN_EMAIL);
                                 const finalName = isAdmin ? "Admin" : name;
 
-                                // තොරතුරු ඩේටාබේස් එකට දානවා
                                 db.ref('users/' + encodedEmail).set({
                                     name: finalName,
                                     email: email
@@ -281,15 +290,40 @@
         });
     }
 
+    // FORGOT PASSWORD FUNCTION (Password අලුතින් හදාගන්න ලින්ක් එක යවන තැන)
+    function sendPasswordReset() {
+        const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+        if (!email) return alert("කරුණාකර ඔබගේ Gmail ලිපිනය ඇතුළත් කරන්න.");
+
+        auth.sendPasswordResetEmail(email)
+            .then(() => {
+                alert("Password එක වෙනස් කිරීමට අවශ්‍ය ආරක්ෂිත ලින්ක් එක සාර්ථකව ඔබගේ " + email + " ලිපිනයට එවන ලදී. කරුණාකර Inbox/Spam ෆෝල්ඩර පරික්ෂා කරන්න.");
+                showLoginView();
+            })
+            .catch((error) => {
+                alert("Error: " + error.message);
+            });
+    }
+
+    // VIEW CHANGERS
     function showRegisterView() {
         document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('forgot-pwd-section').classList.add('hidden');
         document.getElementById('register-section').classList.remove('hidden');
         document.getElementById('auth-page').classList.remove('hidden');
     }
 
     function showLoginView() {
         document.getElementById('register-section').classList.add('hidden');
+        document.getElementById('forgot-pwd-section').classList.add('hidden');
         document.getElementById('login-section').classList.remove('hidden');
+        document.getElementById('auth-page').classList.remove('hidden');
+    }
+
+    function showForgotPwdView() {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('register-section').classList.add('hidden');
+        document.getElementById('forgot-pwd-section').classList.remove('hidden');
         document.getElementById('auth-page').classList.remove('hidden');
     }
 

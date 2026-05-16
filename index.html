@@ -28,6 +28,9 @@
         button { cursor: pointer; transition: 0.3s; }
         button:active { transform: scale(0.98); }
 
+        /* Google Button Style */
+        .google-btn { background: #fff; color: #000; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; }
+
         #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
         .fr-btn { width: auto; padding: 6px 12px; font-size: 11px; background: #3498db; border: none; border-radius: 10px; color: white; }
         .p-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #333; border: 1px solid #444; }
@@ -38,17 +41,21 @@
 
 <div class="content-wrap">
     <div id="auth-page" class="hidden" style="padding:40px;">
-        <div class="card">
+        <div class="card" id="google-login-section">
             <h2 style="text-align:center;">STORY PRO</h2>
-            <p style="text-align:center; font-size:13px; color:#aaa;">Enter Gmail to receive Secure Login Link</p>
+            <p style="text-align:center; font-size:13px; color:#aaa; margin-bottom:20px;">Verify your identity securely with Google</p>
             
-            <input id="user-email" type="email" placeholder="Enter your Gmail address">
-            <div id="name-field" class="hidden">
-                <input id="user-name" placeholder="Enter Your Name (For New Account)">
-            </div>
-            
-            <button onclick="handleGmailAuth()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">CONTINUE</button>
-            <p id="tgl-btn" onclick="tglRegistration()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:20px;">First time here? Register Account</p>
+            <button class="google-btn" onclick="loginWithGoogle()">
+                <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" style="width:20px; height:20px;">
+                Connect with Gmail
+            </button>
+        </div>
+
+        <div class="card hidden" id="register-section">
+            <h3 style="text-align:center; margin-top:0;">Complete Registration</h3>
+            <p style="font-size:12px; color:#aaa;" id="verified-email-txt">Email Verified</p>
+            <input id="new-user-name" placeholder="Enter Your Display Name">
+            <button onclick="saveNewUser()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">CREATE ACCOUNT</button>
         </div>
     </div>
 
@@ -135,22 +142,20 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // ඔබ ලබාදුන් Admin Gmail ලිපිනය
     const ADMIN_EMAIL = "thilinak02@gmail.com"; 
     
-    let myId = localStorage.getItem("myId") || ""; // Base64 encoded email used as key
+    let myId = localStorage.getItem("myId") || ""; 
     let myNm = localStorage.getItem("nm") || "";
     let activeChatPh = "";
     let editKey = null;
     let storyImgData = "";
     let rawStories = {};
+    
+    let tempEmail = ""; // Registration එක සඳහා තාවකාලිකව ඊමේල් එක තබා ගැනීමට
 
     window.onload = () => {
         syncApp();
-        // Gmail Link එකක් හරහා ආපසු පැමිණීම පරීක්ෂා කිරීම
-        if (auth.isSignInWithEmailLink(window.location.href)) {
-            handleEmailLinkSignIn();
-        } else if(myId) {
+        if(myId) {
             start();
         } else {
             document.getElementById('auth-page').classList.remove('hidden');
@@ -173,87 +178,55 @@
         });
     }
 
-    // Gmail එකට Login Link එක යැවීම
-    function handleGmailAuth() {
-        const email = document.getElementById('user-email').value.trim().toLowerCase();
-        if (!email || !email.includes("@")) return alert("කරුණාකර නිවැරදි Gmail ලිපිනයක් ඇතුළත් කරන්න.");
-
-        const isRegMode = !document.getElementById('name-field').classList.contains('hidden');
-        const name = document.getElementById('user-name').value.trim();
+    // Google Popup එක හරහා Login වීම
+    function loginWithGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
         
-        if (isRegMode && !name) return alert("කරුණාකර ඔබගේ නම ඇතුළත් කරන්න.");
-
-        const encodedEmail = btoa(email).replace(/=/g, "");
-        
-        db.ref('users/' + encodedEmail).once('value', snap => {
-            if (!isRegMode && !snap.exists() && email !== ADMIN_EMAIL) {
-                return alert("මෙම Gmail ලිපිනයෙන් ගිණුමක් සදා නැත. 'Register Account' ක්ලික් කරන්න.");
-            }
-            if (isRegMode && snap.exists()) {
-                return alert("මෙම Gmail ලිපිනයෙන් දැනටමත් ගිණුමක් සාදා ඇත. සෘජුවම Login වන්න.");
-            }
-
-            window.localStorage.setItem('emailForSignIn', email);
-            if (isRegMode) window.localStorage.setItem('nameForSignUp', name);
-
-            const actionCodeSettings = {
-                url: window.location.href.split('?')[0],
-                handleCodeInApp: true
-            };
-
-            auth.sendSignInLinkToEmail(email, actionCodeSettings)
-                .then(() => {
-                    alert("ආරක්ෂිත Login ලින්ක් එක ඔබගේ Gmail වෙත සාර්ථකව යවන ලදී. කරුණාකර Inbox පරීක්ෂා කරන්න.");
-                })
-                .catch(error => {
-                    alert("Error: " + error.message);
-                });
-        });
-    }
-
-    // ලින්ක් එක ක්ලික් කර පැමිණි විට සත්‍යාපනය කිරීම
-    function handleEmailLinkSignIn() {
-        let email = window.localStorage.getItem('emailForSignIn');
-        if (!email) {
-            email = window.prompt('තහවුරු කර ගැනීමට කරුණාකර ඔබගේ Gmail එක නැවත ඇතුළත් කරන්න:');
-        }
-        
-        if(!email) return;
-        email = email.toLowerCase();
-
-        auth.signInWithEmailLink(email, window.location.href)
+        auth.signInWithPopup(provider)
             .then((result) => {
-                window.localStorage.removeItem('emailForSignIn');
+                const email = result.user.email.toLowerCase();
                 const encodedEmail = btoa(email).replace(/=/g, "");
-                
-                // Admin පරීක්ෂාව
-                if (email === ADMIN_EMAIL) {
-                    localStorage.setItem("myId", encodedEmail);
-                    localStorage.setItem("nm", "Admin");
-                    db.ref('users/' + encodedEmail).update({ name: "Admin", email: email });
-                    window.location.href = window.location.href.split('?')[0];
-                    return;
-                }
+                tempEmail = email;
 
-                const savedName = window.localStorage.getItem('nameForSignUp');
-                
+                // දැනටමත් Realtime Database එකේ ගිණුම තියෙනවද බලනවා
                 db.ref('users/' + encodedEmail).once('value', snap => {
                     if (snap.exists()) {
+                        // පරණ User කෙනෙක් නම් කෙලින්ම ඇතුළට ගන්නවා
                         localStorage.setItem("myId", encodedEmail);
                         localStorage.setItem("nm", snap.val().name);
+                        start();
                     } else {
-                        const finalName = savedName || "User_" + Math.floor(1000 + Math.random() * 9000);
-                        db.ref('users/' + encodedEmail).set({ name: finalName, email: email });
-                        localStorage.setItem("myId", encodedEmail);
-                        localStorage.setItem("nm", finalName);
+                        // අලුත් User කෙනෙක් නම්, නම දාන Section එක පෙන්වනවා
+                        document.getElementById('google-login-section').classList.add('hidden');
+                        document.getElementById('verified-email-txt').innerText = "Verified: " + email;
+                        document.getElementById('register-section').classList.remove('hidden');
                     }
-                    window.localStorage.removeItem('nameForSignUp');
-                    window.location.href = window.location.href.split('?')[0];
                 });
             })
             .catch((error) => {
-                alert("Login වීමට නොහැකි විය: " + error.message);
+                alert("Google Login Failed: " + error.message);
             });
+    }
+
+    // අලුත් කෙනෙක් නම ඇතුලත් කර ගිණුම සෑදීම සම්පූර්ණ කිරීම
+    function saveNewUser() {
+        const name = document.getElementById('new-user-name').value.trim();
+        if (!name) return alert("කරුණාකර ඔබගේ නම ඇතුළත් කරන්න.");
+
+        const encodedEmail = btoa(tempEmail).replace(/=/g, "");
+        const isAdmin = (tempEmail === ADMIN_EMAIL);
+        const finalName = isAdmin ? "Admin" : name;
+
+        db.ref('users/' + encodedEmail).set({
+            name: finalName,
+            email: tempEmail
+        }).then(() => {
+            localStorage.setItem("myId", encodedEmail);
+            localStorage.setItem("nm", finalName);
+            start();
+        }).catch(err => {
+            alert("Error saving user data: " + err.message);
+        });
     }
 
     function start() {
@@ -415,54 +388,18 @@
         document.getElementById('sm').classList.remove('hidden');
     }
 
-    function editStory(k) {
-        editKey = k;
-        document.getElementById('m-title').innerText = "Edit Post";
-        document.getElementById('si').value = rawStories[k];
-        document.getElementById('img-field').classList.add('hidden');
-        document.getElementById('sm').classList.remove('hidden');
-    }
-
+    // ... (අනෙක් සාමාන්‍ය functions නොවෙනස්ව පවතී)
+    function editStory(k) { editKey = k; document.getElementById('m-title').innerText = "Edit Post"; document.getElementById('si').value = rawStories[k]; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); }
     function closeModal() { document.getElementById('sm').classList.add('hidden'); }
     function closeChat() { document.getElementById('chat-window').classList.add('hidden'); activeChatPh = ""; }
     function delStory(k) { if(confirm("Delete this story?")) db.ref('stories/'+k).remove(); }
-    function logout() { localStorage.clear(); location.reload(); }
-    
-    function tglRegistration() { 
-        document.getElementById('name-field').classList.toggle('hidden');
-        const isReg = !document.getElementById('name-field').classList.contains('hidden');
-        document.getElementById('tgl-btn').innerText = isReg ? "Already have an account? Login" : "First time here? Register Account";
-    }
-    
+    function logout() { auth.signOut(); localStorage.clear(); location.reload(); }
     function setNotice() { const m = prompt("Enter Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
 
     // Upload Listeners
-    document.getElementById('p-pic-up').addEventListener('change', function(e) {
-        const f = e.target.files[0];
-        if(f){
-            const r = new FileReader();
-            r.onload=(ev)=>db.ref('users/'+myId+'/pic').set(ev.target.result);
-            r.readAsDataURL(f);
-        }
-    });
-
-    document.getElementById('bg-upload').addEventListener('change', function(e) {
-        const f = e.target.files[0];
-        if(f){
-            const r = new FileReader();
-            r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result);
-            r.readAsDataURL(f);
-        }
-    });
-
-    document.getElementById('img-input').addEventListener('change', function(e) {
-        const f = e.target.files[0];
-        if(f){
-            const r = new FileReader();
-            r.onload=(ev)=>storyImgData=ev.target.result;
-            r.readAsDataURL(f);
-        }
-    });
+    document.getElementById('p-pic-up').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('users/'+myId+'/pic').set(ev.target.result); r.readAsDataURL(f); } });
+    document.getElementById('bg-upload').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); } });
+    document.getElementById('img-input').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>storyImgData=ev.target.result; r.readAsDataURL(f); } });
 </script>
 </body>
 </html>

@@ -54,18 +54,18 @@
 
         <div class="card hidden" id="google-verify-section">
             <h3 style="text-align:center; margin-top:0;">Create Account</h3>
-            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">First, select your Gmail to securely start the registration.</p>
+            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Select your Google account to verify your real Gmail address.</p>
             
-            <button class="google-btn" onclick="verifyGmailWithGoogle()">
+            <button class="google-btn" onclick="verifyGmailWithGooglePopup()">
                 <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" style="width:20px; height:20px;">
-                Select your Gmail
+                Verify via Google Popup
             </button>
             <p onclick="showLoginView()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa;">Back to Login</p>
         </div>
 
         <div class="card hidden" id="register-profile-section">
             <h3 style="text-align:center; margin-top:0;">Set Account Details</h3>
-            <p style="font-size:12px; color:#4cd137; font-weight:bold; text-align:center;" id="verified-email-txt">Gmail Selected</p>
+            <p style="font-size:12px; color:#4cd137; font-weight:bold; text-align:center;" id="verified-email-txt">Gmail Verified</p>
             
             <input id="new-user-name" placeholder="Choose a Username / Display Name">
             <input id="new-user-pwd" type="password" placeholder="Create a Password (Min 6 chars)">
@@ -170,7 +170,11 @@
 
     window.onload = () => {
         syncApp();
-        checkRedirectResult(); 
+        if(myId) {
+            start();
+        } else {
+            showLoginView();
+        }
     };
 
     function formatText(t) { 
@@ -189,7 +193,7 @@
         });
     }
 
-    // 1. Gmail + Password මඟින් LOGIN වීම
+    // 1. GMAIL + PASSWORD LOGIN
     function loginWithEmailPwd() {
         const email = document.getElementById('login-email').value.trim().toLowerCase();
         const pwd = document.getElementById('login-pwd').value.trim();
@@ -217,59 +221,41 @@
             });
     }
 
-    // 2. අලුත් අය REGISTER වීමට මුලින්ම Google Redirect එකට යාම
-    function verifyGmailWithGoogle() {
+    // 2. GOOGLE POPUP VERIFICATION (ආරක්ෂිත සහ සජීවී ක්‍රමය)
+    function verifyGmailWithGooglePopup() {
         const provider = new firebase.auth.GoogleAuthProvider();
-        // ප්‍රශ්න ඇතිවීම වැළැක්වීමට ගිණුම තෝරන විජට්ටුව හැමවිටම අලුතින්ම පෙන්වීමට බලකිරීම
         provider.setCustomParameters({ prompt: 'select_account' });
-        auth.signInWithRedirect(provider); 
-    }
 
-    // 3. Google Redirect එකෙන් පසු එන දත්ත පිරික්සීම (FIXED LOGIC FOR GITHUB PAGES)
-    function checkRedirectResult() {
-        auth.getRedirectResult()
+        auth.signInWithPopup(provider)
             .then((result) => {
-                if (result && result.user) {
+                if (result.user) {
                     tempEmail = result.user.email.toLowerCase();
                     const encodedEmail = btoa(tempEmail).replace(/=/g, "");
                     
-                    // මුලින්ම මේ ඊමේල් එක ඩේටාබේස් එකේ තියෙනවද බලමු
+                    // දැනටමත් මේ ජීමේල් එකෙන් එකවුන්ට් එකක් තියෙනවද බලනවා
                     db.ref('users/' + encodedEmail).once('value', snap => {
                         if (snap.exists()) {
-                            // දැනටමත් ගිණුමක් තියෙනවා නම් කෙලින්ම ඇප් එකට ගන්නවා
+                            // දැනටමත් ඉන්න කෙනෙක් නම් කෙලින්ම ඇතුළට ගන්නවා
                             localStorage.setItem("myId", encodedEmail);
                             localStorage.setItem("nm", snap.val().name);
                             start();
                         } else {
-                            // ගිණුමක් නැති අලුත් අය සඳහා පසුබිම් සයින්-ඉන් එක ක්ලියර් කර Form එක පෙන්වනවා
+                            // අලුත් කෙනෙක් නම්, ආරක්ෂාව සඳහා සයින්-අවුට් කරලා විස්තර පුරවන ෆෝම් එක පෙන්වනවා
                             auth.signOut().then(() => {
-                                document.getElementById('login-section').classList.add('hidden');
                                 document.getElementById('google-verify-section').classList.add('hidden');
-                                document.getElementById('verified-email-txt').innerText = "Selected Gmail: " + tempEmail;
+                                document.getElementById('verified-email-txt').innerText = "Verified: " + tempEmail;
                                 document.getElementById('register-profile-section').classList.remove('hidden');
-                                document.getElementById('auth-page').classList.remove('hidden');
                             });
                         }
                     });
-                } else {
-                    // සාමාන්‍ය පරිදි ඇප් එකට එන විට හෝ Redirect එකක් නැති විට
-                    if(myId) {
-                        start();
-                    } else {
-                        showLoginView();
-                    }
                 }
             })
             .catch((error) => {
-                // කිසියම් දෝෂයක් ආවොත් මුල් පිටුව පෙන්වා පණිවිඩයක් දෙනවා
-                console.error("Auth Redirect Error: ", error);
-                auth.signOut().then(() => {
-                    showLoginView();
-                });
+                alert("Google Auth Failed: " + error.message);
             });
     }
 
-    // 4. අලුතින්ම Username සහ Password ලබා දී Account එක සාදා අවසන් කිරීම
+    // 3. COMPLETE REGISTER WITH PASSWORD
     function completeRegistration() {
         const name = document.getElementById('new-user-name').value.trim();
         const pwd = document.getElementById('new-user-pwd').value.trim();
@@ -277,14 +263,12 @@
         if (!name) return alert("කරුණාකර Username එකක් ඇතුළත් කරන්න.");
         if (pwd.length < 6) return alert("Password එක සඳහා අවම වශයෙන් අකුරු/ඉලක්කම් 6ක්වත් දෙන්න.");
 
-        // සෘජුවම Firebase Auth එකේ Email + Password යොදා ගිණුම නිර්මාණය කිරීම
         auth.createUserWithEmailAndPassword(tempEmail, pwd)
             .then((userCredential) => {
                 const encodedEmail = btoa(tempEmail).replace(/=/g, "");
                 const isAdmin = (tempEmail === ADMIN_EMAIL);
                 const finalName = isAdmin ? "Admin" : name;
 
-                // ඩේටාබේස් එකේ තොරතුරු සේව් කිරීම
                 db.ref('users/' + encodedEmail).set({
                     name: finalName,
                     email: tempEmail
@@ -295,7 +279,7 @@
                 });
             })
             .catch((error) => {
-                alert("Account Creation Failed: " + error.message + " \nකරුණාකර නැවත උත්සාහ කරන්න.");
+                alert("Account Creation Failed: " + error.message);
                 showLoginView();
             });
     }

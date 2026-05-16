@@ -43,9 +43,9 @@
         
         <div class="card" id="login-section">
             <h2 style="text-align:center;">STORY PRO</h2>
-            <p style="text-align:center; font-size:13px; color:#aaa; margin-bottom:20px;">Login to your account</p>
+            <p style="text-align:center; font-size:13px; color:#aaa; margin-bottom:20px;">Login with your Gmail & Password</p>
             
-            <input id="login-email" type="email" placeholder="Enter your Gmail address">
+            <input id="login-email" type="email" placeholder="Enter Gmail address">
             <input id="login-pwd" type="password" placeholder="Enter Password">
             
             <button onclick="loginWithEmailPwd()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">LOGIN</button>
@@ -53,24 +53,24 @@
         </div>
 
         <div class="card hidden" id="google-verify-section">
-            <h3 style="text-align:center; margin-top:0;">Verify Your Gmail</h3>
-            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">We use Google to securely verify your real Gmail address.</p>
+            <h3 style="text-align:center; margin-top:0;">Create Account</h3>
+            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">First, select your Gmail to securely start the registration.</p>
             
             <button class="google-btn" onclick="verifyGmailWithGoogle()">
                 <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" style="width:20px; height:20px;">
-                Connect with Gmail
+                Select your Gmail
             </button>
             <p onclick="showLoginView()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa;">Back to Login</p>
         </div>
 
         <div class="card hidden" id="register-profile-section">
-            <h3 style="text-align:center; margin-top:0;">Create Account</h3>
-            <p style="font-size:12px; color:#4cd137; font-weight:bold; text-align:center;" id="verified-email-txt">Email Verified</p>
+            <h3 style="text-align:center; margin-top:0;">Set Account Details</h3>
+            <p style="font-size:12px; color:#4cd137; font-weight:bold; text-align:center;" id="verified-email-txt">Gmail Selected</p>
             
-            <input id="new-user-name" placeholder="Enter Your Display Name">
-            <input id="new-user-pwd" type="password" placeholder="Create a New Password (Min 6 characters)">
+            <input id="new-user-name" placeholder="Choose a Username / Display Name">
+            <input id="new-user-pwd" type="password" placeholder="Create a Password (Min 6 chars)">
             
-            <button onclick="completeRegistration()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">CREATE MY ACCOUNT</button>
+            <button onclick="completeRegistration()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">SAVE & ENTER APP</button>
         </div>
     </div>
 
@@ -166,11 +166,11 @@
     let storyImgData = "";
     let rawStories = {};
     
-    let tempEmail = ""; // Register වීමේදී තාවකාලිකව ඊමේල් එක මතක තබා ගැනීමට
+    let tempEmail = ""; // තෝරාගත් Gmail එක තාවකාලිකව තබා ගැනීමට
 
     window.onload = () => {
         syncApp();
-        checkRedirectResult(); // පිටුව Redirect වී පැමිණියේදැයි පරීක්ෂා කිරීම
+        checkRedirectResult(); 
     };
 
     function formatText(t) { 
@@ -189,7 +189,7 @@
         });
     }
 
-    // 1. සාමාන්‍ය ඊමේල් සහ පාස්වර්ඩ් මඟින් LOGIN වීම
+    // 1. Gmail + Password මඟින් LOGIN වීම (ඕනෑම වෙලාවක)
     function loginWithEmailPwd() {
         const email = document.getElementById('login-email').value.trim().toLowerCase();
         const pwd = document.getElementById('login-pwd').value.trim();
@@ -217,37 +217,26 @@
             });
     }
 
-    // 2. අලුත් අය සඳහා Google Redirect හරහා Gmail එක VERIFY කිරීම
+    // 2. අලුත් අය REGISTER වීමට මුලින්ම Google Redirect එකට යාම
     function verifyGmailWithGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithRedirect(provider); // ඇප් එක ඇතුළේ වැඩ කිරීමට Redirect ක්‍රමය යොදා ඇත
+        auth.signInWithRedirect(provider); 
     }
 
-    // 3. Google එකෙන් Redirect වී ආපසු එන දත්ත කියවීම
+    // 3. Google එකෙන් Gmail එක තෝරාගෙන ආපසු එන විට ක්‍රියාත්මක වන කොටස
     function checkRedirectResult() {
         auth.getRedirectResult()
             .then((result) => {
                 if (result.user) {
-                    const email = result.user.email.toLowerCase();
-                    const encodedEmail = btoa(email).replace(/=/g, "");
-                    tempEmail = email;
-
-                    // දැනටමත් Database එකේ මේ ගිණුම තියෙනවද බලනවා
-                    db.ref('users/' + encodedEmail).once('value', snap => {
-                        if (snap.exists()) {
-                            // දැනටමත් Register වී ඇති අයෙක් නම් කෙලින්ම ඇතුළට ගන්නවා
-                            localStorage.setItem("myId", encodedEmail);
-                            localStorage.setItem("nm", snap.val().name);
-                            start();
-                        } else {
-                            // සැබෑ Gmail එකක් බව තහවුරුයි, දැන් නම සහ පාස්වර්ඩ් එක ගන්නවා
-                            document.getElementById('login-section').classList.add('hidden');
-                            document.getElementById('google-verify-section').classList.add('hidden');
-                            document.getElementById('verified-email-txt').innerText = "Verified Gmail: " + email;
-                            document.getElementById('register-profile-section').classList.remove('hidden');
-                            document.getElementById('auth-page').classList.remove('hidden');
-                        }
-                    });
+                    // පරිශීලකයා සාර්ථකව Gmail එකක් තේරුවා
+                    tempEmail = result.user.email.toLowerCase();
+                    
+                    // කෙලින්ම Username සහ Password දෙන Form එක පෙන්වනවා (ලොග් කරගන්නේ නැහැ)
+                    document.getElementById('login-section').classList.add('hidden');
+                    document.getElementById('google-verify-section').classList.add('hidden');
+                    document.getElementById('verified-email-txt').innerText = "Selected Gmail: " + tempEmail;
+                    document.getElementById('register-profile-section').classList.remove('hidden');
+                    document.getElementById('auth-page').classList.remove('hidden');
                 } else {
                     // සාමාන්‍ය පරිදි ඇප් එකට එන විට
                     if(myId) {
@@ -260,20 +249,20 @@
             .catch((error) => {
                 showLoginView();
                 if (error.code !== 'auth/redirect-cancelled-by-user') {
-                    alert("Google Verification Failed: " + error.message);
+                    alert("Google Select Failed: " + error.message);
                 }
             });
     }
 
-    // 4. Gmail එක තහවුරු වූ පසු නම සහ පාස්වර්ඩ් එක ලබා දී ගිණුම සාදා නිම කිරීම
+    // 4. Gmail එක තේරූ පසු Username සහ Password ලබා දී Account එක නිම කිරීම
     function completeRegistration() {
         const name = document.getElementById('new-user-name').value.trim();
         const pwd = document.getElementById('new-user-pwd').value.trim();
 
-        if (!name) return alert("කරුණාකර ඔබගේ නම ඇතුළත් කරන්න.");
-        if (pwd.length < 6) return alert("Password එක සඳහා අවම වශයෙන් අකුරු/ඉලක්කම් 6ක්වත් ඇතුළත් කරන්න.");
+        if (!name) return alert("කරුණාකර Username එකක් ඇතුළත් කරන්න.");
+        if (pwd.length < 6) return alert("Password එක සඳහා අවම වශයෙන් අකුරු/ඉලක්කම් 6ක්වත් දෙන්න.");
 
-        // වත්මන් ගූගල් පරිශීලකයාටම Email/Password ලොගින් එක සම්බන්ධ කිරීම (Link කිරීම)
+        // වත්මන් ගූගල් ගිණුමට සාමාන්‍ය Email/Password ක්‍රමය ලින්ක් කිරීම
         const currentUser = auth.currentUser;
         const credential = firebase.auth.EmailAuthProvider.credential(tempEmail, pwd);
 
@@ -283,6 +272,7 @@
                 const isAdmin = (tempEmail === ADMIN_EMAIL);
                 const finalName = isAdmin ? "Admin" : name;
 
+                // ඩේටාබේස් එකේ පරිශීලකයාගේ තොරතුරු සේව් කිරීම
                 db.ref('users/' + encodedEmail).set({
                     name: finalName,
                     email: tempEmail
@@ -293,11 +283,10 @@
                 });
             })
             .catch((error) => {
-                alert("Account Creation Failed: " + error.message);
+                alert("Account Setup Failed: " + error.message);
             });
     }
 
-    // දර්ශන මාරු කරන (Navigation) Functions
     function showRegisterView() {
         document.getElementById('login-section').classList.add('hidden');
         document.getElementById('register-profile-section').classList.add('hidden');
@@ -328,7 +317,7 @@
         loadFriends();
     }
 
-    // ... (අනෙක් සියලුම ඇතුළාන්ත චැට් සහ ස්ටෝරි functions නොවෙනස්ව ක්‍රියාත්මක වේ)
+    // (ඇතුළාන්ත අනෙකුත් සියලුම Chats/Stories functions නොවෙනස්ව පවතී)
     function loadStories() {
         db.ref('stories').on('value', snap => {
             const feed = document.getElementById('feed'); feed.innerHTML = "";

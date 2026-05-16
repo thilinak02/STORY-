@@ -28,8 +28,7 @@
         button { cursor: pointer; transition: 0.3s; }
         button:active { transform: scale(0.98); }
 
-        /* Google Button Style */
-        .google-btn { background: #fff; color: #000; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; }
+        .google-btn { background: #fff; color: #000; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; margin-bottom: 15px; }
 
         #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
         .fr-btn { width: auto; padding: 6px 12px; font-size: 11px; background: #3498db; border: none; border-radius: 10px; color: white; }
@@ -41,21 +40,37 @@
 
 <div class="content-wrap">
     <div id="auth-page" class="hidden" style="padding:40px;">
-        <div class="card" id="google-login-section">
+        
+        <div class="card" id="login-section">
             <h2 style="text-align:center;">STORY PRO</h2>
-            <p style="text-align:center; font-size:13px; color:#aaa; margin-bottom:20px;">Verify your identity securely with Google</p>
+            <p style="text-align:center; font-size:13px; color:#aaa; margin-bottom:20px;">Login to your account</p>
             
-            <button class="google-btn" onclick="loginWithGoogle()">
+            <input id="login-email" type="email" placeholder="Enter your Gmail address">
+            <input id="login-pwd" type="password" placeholder="Enter Password">
+            
+            <button onclick="loginWithEmailPwd()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">LOGIN</button>
+            <p onclick="showRegisterView()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:20px;">First time here? <b>Register Account</b></p>
+        </div>
+
+        <div class="card hidden" id="google-verify-section">
+            <h3 style="text-align:center; margin-top:0;">Verify Your Gmail</h3>
+            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">We use Google to securely verify your real Gmail address.</p>
+            
+            <button class="google-btn" onclick="verifyGmailWithGoogle()">
                 <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" style="width:20px; height:20px;">
                 Connect with Gmail
             </button>
+            <p onclick="showLoginView()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa;">Back to Login</p>
         </div>
 
-        <div class="card hidden" id="register-section">
-            <h3 style="text-align:center; margin-top:0;">Complete Registration</h3>
-            <p style="font-size:12px; color:#aaa;" id="verified-email-txt">Email Verified</p>
+        <div class="card hidden" id="register-profile-section">
+            <h3 style="text-align:center; margin-top:0;">Create Account</h3>
+            <p style="font-size:12px; color:#4cd137; font-weight:bold; text-align:center;" id="verified-email-txt">Email Verified</p>
+            
             <input id="new-user-name" placeholder="Enter Your Display Name">
-            <button onclick="saveNewUser()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">CREATE ACCOUNT</button>
+            <input id="new-user-pwd" type="password" placeholder="Create a New Password (Min 6 characters)">
+            
+            <button onclick="completeRegistration()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">CREATE MY ACCOUNT</button>
         </div>
     </div>
 
@@ -151,15 +166,11 @@
     let storyImgData = "";
     let rawStories = {};
     
-    let tempEmail = ""; // Registration එක සඳහා තාවකාලිකව ඊමේල් එක තබා ගැනීමට
+    let tempEmail = ""; // Register වීමේදී තාවකාලිකව ඊමේල් එක මතක තබා ගැනීමට
 
     window.onload = () => {
         syncApp();
-        if(myId) {
-            start();
-        } else {
-            document.getElementById('auth-page').classList.remove('hidden');
-        }
+        checkRedirectResult(); // පිටුව Redirect වී පැමිණියේදැයි පරීක්ෂා කිරීම
     };
 
     function formatText(t) { 
@@ -178,55 +189,127 @@
         });
     }
 
-    // Google Popup එක හරහා Login වීම
-    function loginWithGoogle() {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        
-        auth.signInWithPopup(provider)
-            .then((result) => {
-                const email = result.user.email.toLowerCase();
-                const encodedEmail = btoa(email).replace(/=/g, "");
-                tempEmail = email;
+    // 1. සාමාන්‍ය ඊමේල් සහ පාස්වර්ඩ් මඟින් LOGIN වීම
+    function loginWithEmailPwd() {
+        const email = document.getElementById('login-email').value.trim().toLowerCase();
+        const pwd = document.getElementById('login-pwd').value.trim();
 
-                // දැනටමත් Realtime Database එකේ ගිණුම තියෙනවද බලනවා
+        if (!email || !pwd) return alert("කරුණාකර Gmail ලිපිනය සහ Password ඇතුළත් කරන්න.");
+
+        auth.signInWithEmailAndPassword(email, pwd)
+            .then((userCredential) => {
+                const encodedEmail = btoa(email).replace(/=/g, "");
                 db.ref('users/' + encodedEmail).once('value', snap => {
+                    let currentName = "User";
                     if (snap.exists()) {
-                        // පරණ User කෙනෙක් නම් කෙලින්ම ඇතුළට ගන්නවා
-                        localStorage.setItem("myId", encodedEmail);
-                        localStorage.setItem("nm", snap.val().name);
-                        start();
-                    } else {
-                        // අලුත් User කෙනෙක් නම්, නම දාන Section එක පෙන්වනවා
-                        document.getElementById('google-login-section').classList.add('hidden');
-                        document.getElementById('verified-email-txt').innerText = "Verified: " + email;
-                        document.getElementById('register-section').classList.remove('hidden');
+                        currentName = snap.val().name;
+                    } else if (email === ADMIN_EMAIL) {
+                        currentName = "Admin";
+                        db.ref('users/' + encodedEmail).update({ name: "Admin", email: email });
                     }
+                    localStorage.setItem("myId", encodedEmail);
+                    localStorage.setItem("nm", currentName);
+                    start();
                 });
             })
             .catch((error) => {
-                alert("Google Login Failed: " + error.message);
+                alert("Login Failed: " + error.message);
             });
     }
 
-    // අලුත් කෙනෙක් නම ඇතුලත් කර ගිණුම සෑදීම සම්පූර්ණ කිරීම
-    function saveNewUser() {
+    // 2. අලුත් අය සඳහා Google Redirect හරහා Gmail එක VERIFY කිරීම
+    function verifyGmailWithGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithRedirect(provider); // ඇප් එක ඇතුළේ වැඩ කිරීමට Redirect ක්‍රමය යොදා ඇත
+    }
+
+    // 3. Google එකෙන් Redirect වී ආපසු එන දත්ත කියවීම
+    function checkRedirectResult() {
+        auth.getRedirectResult()
+            .then((result) => {
+                if (result.user) {
+                    const email = result.user.email.toLowerCase();
+                    const encodedEmail = btoa(email).replace(/=/g, "");
+                    tempEmail = email;
+
+                    // දැනටමත් Database එකේ මේ ගිණුම තියෙනවද බලනවා
+                    db.ref('users/' + encodedEmail).once('value', snap => {
+                        if (snap.exists()) {
+                            // දැනටමත් Register වී ඇති අයෙක් නම් කෙලින්ම ඇතුළට ගන්නවා
+                            localStorage.setItem("myId", encodedEmail);
+                            localStorage.setItem("nm", snap.val().name);
+                            start();
+                        } else {
+                            // සැබෑ Gmail එකක් බව තහවුරුයි, දැන් නම සහ පාස්වර්ඩ් එක ගන්නවා
+                            document.getElementById('login-section').classList.add('hidden');
+                            document.getElementById('google-verify-section').classList.add('hidden');
+                            document.getElementById('verified-email-txt').innerText = "Verified Gmail: " + email;
+                            document.getElementById('register-profile-section').classList.remove('hidden');
+                            document.getElementById('auth-page').classList.remove('hidden');
+                        }
+                    });
+                } else {
+                    // සාමාන්‍ය පරිදි ඇප් එකට එන විට
+                    if(myId) {
+                        start();
+                    } else {
+                        showLoginView();
+                    }
+                }
+            })
+            .catch((error) => {
+                showLoginView();
+                if (error.code !== 'auth/redirect-cancelled-by-user') {
+                    alert("Google Verification Failed: " + error.message);
+                }
+            });
+    }
+
+    // 4. Gmail එක තහවුරු වූ පසු නම සහ පාස්වර්ඩ් එක ලබා දී ගිණුම සාදා නිම කිරීම
+    function completeRegistration() {
         const name = document.getElementById('new-user-name').value.trim();
+        const pwd = document.getElementById('new-user-pwd').value.trim();
+
         if (!name) return alert("කරුණාකර ඔබගේ නම ඇතුළත් කරන්න.");
+        if (pwd.length < 6) return alert("Password එක සඳහා අවම වශයෙන් අකුරු/ඉලක්කම් 6ක්වත් ඇතුළත් කරන්න.");
 
-        const encodedEmail = btoa(tempEmail).replace(/=/g, "");
-        const isAdmin = (tempEmail === ADMIN_EMAIL);
-        const finalName = isAdmin ? "Admin" : name;
+        // වත්මන් ගූගල් පරිශීලකයාටම Email/Password ලොගින් එක සම්බන්ධ කිරීම (Link කිරීම)
+        const currentUser = auth.currentUser;
+        const credential = firebase.auth.EmailAuthProvider.credential(tempEmail, pwd);
 
-        db.ref('users/' + encodedEmail).set({
-            name: finalName,
-            email: tempEmail
-        }).then(() => {
-            localStorage.setItem("myId", encodedEmail);
-            localStorage.setItem("nm", finalName);
-            start();
-        }).catch(err => {
-            alert("Error saving user data: " + err.message);
-        });
+        currentUser.linkWithCredential(credential)
+            .then((userCredential) => {
+                const encodedEmail = btoa(tempEmail).replace(/=/g, "");
+                const isAdmin = (tempEmail === ADMIN_EMAIL);
+                const finalName = isAdmin ? "Admin" : name;
+
+                db.ref('users/' + encodedEmail).set({
+                    name: finalName,
+                    email: tempEmail
+                }).then(() => {
+                    localStorage.setItem("myId", encodedEmail);
+                    localStorage.setItem("nm", finalName);
+                    start();
+                });
+            })
+            .catch((error) => {
+                alert("Account Creation Failed: " + error.message);
+            });
+    }
+
+    // දර්ශන මාරු කරන (Navigation) Functions
+    function showRegisterView() {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('register-profile-section').classList.add('hidden');
+        document.getElementById('google-verify-section').classList.remove('hidden');
+        document.getElementById('auth-page').classList.remove('hidden');
+    }
+
+    function showLoginView() {
+        document.getElementById('google-verify-section').classList.add('hidden');
+        document.getElementById('register-profile-section').classList.add('hidden');
+        document.getElementById('login-section').classList.remove('hidden');
+        document.getElementById('auth-page').classList.remove('hidden');
     }
 
     function start() {
@@ -245,150 +328,38 @@
         loadFriends();
     }
 
+    // ... (අනෙක් සියලුම ඇතුළාන්ත චැට් සහ ස්ටෝරි functions නොවෙනස්ව ක්‍රියාත්මක වේ)
     function loadStories() {
         db.ref('stories').on('value', snap => {
             const feed = document.getElementById('feed'); feed.innerHTML = "";
             snap.forEach(x => {
-                const s = x.val();
-                const key = x.key;
-                rawStories[key] = s.text;
+                const s = x.val(); const key = x.key; rawStories[key] = s.text;
                 const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
                 const canEdit = (s.uPh === myId || myId === adminEncoded);
-                
-                let textToShow = s.text;
-                let seeMoreBtn = "";
-                if(textToShow.length > 150) {
-                    textToShow = textToShow.substring(0, 150) + "...";
-                    seeMoreBtn = `<span class="see-more" onclick="showFullText('${key}')">See More</span>`;
-                }
-
+                let textToShow = s.text; let seeMoreBtn = "";
+                if(textToShow.length > 150) { textToShow = textToShow.substring(0, 150) + "..."; seeMoreBtn = `<span class="see-more" onclick="showFullText('${key}')">See More</span>`; }
                 feed.insertAdjacentHTML('afterbegin', `
                     <div class="card">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <b>${s.user}</b>
-                            ${s.uPh !== myId ? `<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>` : ''}
-                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;"><b>${s.user}</b>${s.uPh !== myId ? `<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>` : ''}</div>
                         <div id="story-text-${key}" style="margin:10px 0; white-space: pre-wrap; font-size:14px;">${formatText(textToShow)}${seeMoreBtn}</div>
                         ${s.img ? `<img src="${s.img}" class="story-img">` : ''}
-                        ${canEdit ? `<div style="text-align:right; margin-top:10px;">
-                            <span onclick="editStory('${key}')" style="cursor:pointer; font-size:18px;">✏️</span>
-                            <span onclick="delStory('${key}')" style="cursor:pointer; font-size:18px; margin-left:15px;">🗑️</span>
-                        </div>` : ''}
+                        ${canEdit ? `<div style="text-align:right; margin-top:10px;"><span onclick="editStory('${key}')" style="cursor:pointer; font-size:18px;">✏️</span><span onclick="delStory('${key}')" style="cursor:pointer; font-size:18px; margin-left:15px;">🗑️</span></div>` : ''}
                     </div>
                 `);
             });
         });
     }
 
-    function showFullText(key) {
-        document.getElementById('story-text-' + key).innerHTML = formatText(rawStories[key]);
-    }
-
-    function postStory() {
-        const txt = document.getElementById('si').value.trim();
-        if(!txt) return alert("Write something!");
-
-        if(editKey) {
-            db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); });
-        } else {
-            db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => { closeModal(); });
-        }
-    }
-
-    function searchUsers() {
-        const q = document.getElementById('search-user').value.toLowerCase();
-        const res = document.getElementById('search-results');
-        if(q.length < 2) { res.innerHTML = ""; return; }
-
-        db.ref('users').once('value', snap => {
-            res.innerHTML = "";
-            snap.forEach(u => {
-                if(u.val().name.toLowerCase().includes(q) && u.key !== myId) {
-                    res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;">
-                        <span>${u.val().name}</span>
-                        <button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button>
-                    </div>`;
-                }
-            });
-        });
-    }
-
-    function sendReq(to, toNm) {
-        db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm});
-        alert("Friend request sent to " + toNm);
-    }
-
-    function loadFriends() {
-        db.ref('friends/'+myId).on('value', snap => {
-            const c = document.getElementById('cons'); c.innerHTML = "";
-            snap.forEach(f => {
-                const data = f.val();
-                if(data.status === 'accepted') {
-                    db.ref('users/'+f.key+'/pic').once('value', p => {
-                        const img = p.exists() ? p.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                        c.insertAdjacentHTML('beforeend', `
-                            <div class="card" onclick="openChat('${f.key}','${data.name}')" style="display:flex; align-items:center; gap:12px; cursor:pointer;">
-                                <img src="${img}" class="p-img">
-                                <div><b>${data.name}</b><div style="font-size:10px; color:#888;">Tap to chat</div></div>
-                            </div>
-                        `);
-                    });
-                } else if(data.status === 'pending') {
-                    c.insertAdjacentHTML('afterbegin', `
-                        <div class="card" style="border:1px solid #f1c40f;">
-                            <p style="margin:0 0 10px 0; font-size:13px;">Friend Request: <b>${data.name}</b></p>
-                            <button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${data.name}')">Accept</button>
-                        </div>
-                    `);
-                }
-            });
-        });
-    }
-
-    function acc(targetId, nm) {
-        db.ref('friends/'+myId+'/'+targetId).set({status:'accepted', name:nm});
-        db.ref('friends/'+targetId+'/'+myId).set({status:'accepted', name:myNm});
-    }
-
-    function openChat(targetId, name) {
-        activeChatPh = targetId; 
-        document.getElementById('chat-name').innerText = name;
-        document.getElementById('chat-window').classList.remove('hidden');
-        const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId;
-        db.ref('messages/'+cid).on('value', s => {
-            const mc = document.getElementById('msg-container'); mc.innerHTML = "";
-            s.forEach(m => {
-                const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;';
-                mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px; word-wrap: break-word;">${formatText(m.val().msg)}</div>`;
-            });
-            mc.scrollTop = mc.scrollHeight;
-        });
-    }
-
-    function sendMsg() {
-        const msg = document.getElementById('msg-input').value.trim();
-        if(!msg) return;
-        const cid = myId < activeChatPh ? myId+"_"+activeChatPh : activeChatPh+"_"+myId;
-        db.ref('messages/'+cid).push({ sender: myId, msg: msg, time: Date.now() });
-        document.getElementById('msg-input').value = "";
-    }
-
-    function pg(id, el) {
-        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-        document.getElementById(id).classList.remove('hidden');
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        el.classList.add('active');
-    }
-
-    function openStoryModal() {
-        editKey = null; storyImgData = ""; 
-        document.getElementById('si').value = "";
-        document.getElementById('m-title').innerText = "New Post";
-        document.getElementById('img-field').classList.remove('hidden');
-        document.getElementById('sm').classList.remove('hidden');
-    }
-
-    // ... (අනෙක් සාමාන්‍ය functions නොවෙනස්ව පවතී)
+    function showFullText(key) { document.getElementById('story-text-' + key).innerHTML = formatText(rawStories[key]); }
+    function postStory() { const txt = document.getElementById('si').value.trim(); if(!txt) return alert("Write something!"); if(editKey) { db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); }); } else { db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => { closeModal(); }); } }
+    function searchUsers() { const q = document.getElementById('search-user').value.toLowerCase(); const res = document.getElementById('search-results'); if(q.length < 2) { res.innerHTML = ""; return; } db.ref('users').once('value', snap => { res.innerHTML = ""; snap.forEach(u => { if(u.val().name.toLowerCase().includes(q) && u.key !== myId) { res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;"><span>${u.val().name}</span><button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button></div>`; } }); }); }
+    function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm}); alert("Friend request sent to " + toNm); }
+    function loadFriends() { db.ref('friends/'+myId).on('value', snap => { const c = document.getElementById('cons'); c.innerHTML = ""; snap.forEach(f => { const data = f.val(); if(data.status === 'accepted') { db.ref('users/'+f.key+'/pic').once('value', p => { const img = p.exists() ? p.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png"; c.insertAdjacentHTML('beforeend', ` <div class="card" onclick="openChat('${f.key}','${data.name}')" style="display:flex; align-items:center; gap:12px; cursor:pointer;"><img src="${img}" class="p-img"><div><b>${data.name}</b><div style="font-size:10px; color:#888;">Tap to chat</div></div></div> `); }); } else if(data.status === 'pending') { c.insertAdjacentHTML('afterbegin', ` <div class="card" style="border:1px solid #f1c40f;"><p style="margin:0 0 10px 0; font-size:13px;">Friend Request: <b>${data.name}</b></p><button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${data.name}')">Accept</button></div> `); } }); }); }
+    function acc(targetId, nm) { db.ref('friends/'+myId+'/'+targetId).set({status:'accepted', name:nm}); db.ref('friends/'+targetId+'/'+myId).set({status:'accepted', name:myNm}); }
+    function openChat(targetId, name) { activeChatPh = targetId; document.getElementById('chat-name').innerText = name; document.getElementById('chat-window').classList.remove('hidden'); const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId; db.ref('messages/'+cid).on('value', s => { const mc = document.getElementById('msg-container'); mc.innerHTML = ""; s.forEach(m => { const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;'; mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px; word-wrap: break-word;">${formatText(m.val().msg)}</div>`; }); mc.scrollTop = mc.scrollHeight; }); }
+    function sendMsg() { const msg = document.getElementById('msg-input').value.trim(); if(!msg) return; const cid = myId < activeChatPh ? myId+"_"+activeChatPh : activeChatPh+"_"+myId; db.ref('messages/'+cid).push({ sender: myId, msg: msg, time: Date.now() }); document.getElementById('msg-input').value = ""; }
+    function pg(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
+    function openStoryModal() { editKey = null; storyImgData = ""; document.getElementById('si').value = ""; document.getElementById('m-title').innerText = "New Post"; document.getElementById('img-field').classList.remove('hidden'); document.getElementById('sm').classList.remove('hidden'); }
     function editStory(k) { editKey = k; document.getElementById('m-title').innerText = "Edit Post"; document.getElementById('si').value = rawStories[k]; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); }
     function closeModal() { document.getElementById('sm').classList.add('hidden'); }
     function closeChat() { document.getElementById('chat-window').classList.add('hidden'); activeChatPh = ""; }
@@ -396,7 +367,6 @@
     function logout() { auth.signOut(); localStorage.clear(); location.reload(); }
     function setNotice() { const m = prompt("Enter Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
 
-    // Upload Listeners
     document.getElementById('p-pic-up').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('users/'+myId+'/pic').set(ev.target.result); r.readAsDataURL(f); } });
     document.getElementById('bg-upload').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); } });
     document.getElementById('img-input').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>storyImgData=ev.target.result; r.readAsDataURL(f); } });

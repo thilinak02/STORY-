@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STORY PRO - Master Edition</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.75); }
@@ -39,11 +40,15 @@
     <div id="auth-page" class="hidden" style="padding:40px;">
         <div class="card">
             <h2 style="text-align:center;">STORY PRO</h2>
-            <input id="ap" type="tel" placeholder="Phone Number (e.g. 0771234567)">
-            <input id="as" type="password" placeholder="Password">
-            <div id="ud" class="hidden"><input id="au" placeholder="Display Name"></div>
-            <button onclick="authMe()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">ENTER</button>
-            <p id="tgl-btn" onclick="tgl()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:20px;">Don't have an account? Create one</p>
+            <p style="text-align:center; font-size:13px; color:#aaa;">Enter Gmail to receive Secure Login Link</p>
+            
+            <input id="user-email" type="email" placeholder="Enter your Gmail address">
+            <div id="name-field" class="hidden">
+                <input id="user-name" placeholder="Enter Your Name (For New Account)">
+            </div>
+            
+            <button onclick="handleGmailAuth()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">CONTINUE</button>
+            <p id="tgl-btn" onclick="tglRegistration()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:20px;">First time here? Register Account</p>
         </div>
     </div>
 
@@ -115,15 +120,25 @@
 </div>
 
 <script>
-    // Firebase Setup
-    const firebaseConfig = { databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com" };
-    firebase.initializeApp(firebaseConfig);
+    // Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
+        authDomain: "story-ceca0.firebaseapp.com",
+        projectId: "story-ceca0",
+        storageBucket: "story-ceca0.firebasestorage.app",
+        messagingSenderId: "820075788039",
+        appId: "1:820075788039:web:421fd811a4b4a3249a77a2",
+        databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.database();
 
-    const ADMIN_PH = "0712729189";
-    const ADMIN_PW = "Thilinak9411@";
+    // ඔබ ලබාදුන් Admin Gmail ලිපිනය
+    const ADMIN_EMAIL = "thilinak02@gmail.com"; 
     
-    let myPh = localStorage.getItem("ph") || "";
+    let myId = localStorage.getItem("myId") || ""; // Base64 encoded email used as key
     let myNm = localStorage.getItem("nm") || "";
     let activeChatPh = "";
     let editKey = null;
@@ -132,7 +147,10 @@
 
     window.onload = () => {
         syncApp();
-        if(myPh) {
+        // Gmail Link එකක් හරහා ආපසු පැමිණීම පරීක්ෂා කිරීම
+        if (auth.isSignInWithEmailLink(window.location.href)) {
+            handleEmailLinkSignIn();
+        } else if(myId) {
             start();
         } else {
             document.getElementById('auth-page').classList.remove('hidden');
@@ -155,40 +173,98 @@
         });
     }
 
-    function authMe() {
-        const p = document.getElementById('ap').value.trim();
-        const s = document.getElementById('as').value.trim();
-        if(!p || !s) return alert("Please fill all fields");
+    // Gmail එකට Login Link එක යැවීම
+    function handleGmailAuth() {
+        const email = document.getElementById('user-email').value.trim().toLowerCase();
+        if (!email || !email.includes("@")) return alert("කරුණාකර නිවැරදි Gmail ලිපිනයක් ඇතුළත් කරන්න.");
 
-        if(p === ADMIN_PH && s === ADMIN_PW) {
-            localStorage.setItem("ph", p); localStorage.setItem("nm", "Admin"); location.reload(); return;
-        }
+        const isRegMode = !document.getElementById('name-field').classList.contains('hidden');
+        const name = document.getElementById('user-name').value.trim();
+        
+        if (isRegMode && !name) return alert("කරුණාකර ඔබගේ නම ඇතුළත් කරන්න.");
 
-        db.ref('users/'+p).once('value', v => {
-            if(v.exists()) {
-                if(v.val().pass == s) {
-                    localStorage.setItem("ph",p); localStorage.setItem("nm",v.val().name); location.reload();
-                } else { alert("Incorrect Password!"); }
-            } else {
-                const isReg = !document.getElementById('ud').classList.contains('hidden');
-                if(isReg) {
-                    const n = document.getElementById('au').value.trim();
-                    if(!n) return alert("Enter a name");
-                    db.ref('users/'+p).set({pass:s, name:n}).then(()=> {
-                        localStorage.setItem("ph",p); localStorage.setItem("nm",n); location.reload();
-                    });
-                } else { alert("User not found. Please click 'Create Account'"); }
+        const encodedEmail = btoa(email).replace(/=/g, "");
+        
+        db.ref('users/' + encodedEmail).once('value', snap => {
+            if (!isRegMode && !snap.exists() && email !== ADMIN_EMAIL) {
+                return alert("මෙම Gmail ලිපිනයෙන් ගිණුමක් සදා නැත. 'Register Account' ක්ලික් කරන්න.");
             }
+            if (isRegMode && snap.exists()) {
+                return alert("මෙම Gmail ලිපිනයෙන් දැනටමත් ගිණුමක් සාදා ඇත. සෘජුවම Login වන්න.");
+            }
+
+            window.localStorage.setItem('emailForSignIn', email);
+            if (isRegMode) window.localStorage.setItem('nameForSignUp', name);
+
+            const actionCodeSettings = {
+                url: window.location.href.split('?')[0],
+                handleCodeInApp: true
+            };
+
+            auth.sendSignInLinkToEmail(email, actionCodeSettings)
+                .then(() => {
+                    alert("ආරක්ෂිත Login ලින්ක් එක ඔබගේ Gmail වෙත සාර්ථකව යවන ලදී. කරුණාකර Inbox පරීක්ෂා කරන්න.");
+                })
+                .catch(error => {
+                    alert("Error: " + error.message);
+                });
         });
+    }
+
+    // ලින්ක් එක ක්ලික් කර පැමිණි විට සත්‍යාපනය කිරීම
+    function handleEmailLinkSignIn() {
+        let email = window.localStorage.getItem('emailForSignIn');
+        if (!email) {
+            email = window.prompt('තහවුරු කර ගැනීමට කරුණාකර ඔබගේ Gmail එක නැවත ඇතුළත් කරන්න:');
+        }
+        
+        if(!email) return;
+        email = email.toLowerCase();
+
+        auth.signInWithEmailLink(email, window.location.href)
+            .then((result) => {
+                window.localStorage.removeItem('emailForSignIn');
+                const encodedEmail = btoa(email).replace(/=/g, "");
+                
+                // Admin පරීක්ෂාව
+                if (email === ADMIN_EMAIL) {
+                    localStorage.setItem("myId", encodedEmail);
+                    localStorage.setItem("nm", "Admin");
+                    db.ref('users/' + encodedEmail).update({ name: "Admin", email: email });
+                    window.location.href = window.location.href.split('?')[0];
+                    return;
+                }
+
+                const savedName = window.localStorage.getItem('nameForSignUp');
+                
+                db.ref('users/' + encodedEmail).once('value', snap => {
+                    if (snap.exists()) {
+                        localStorage.setItem("myId", encodedEmail);
+                        localStorage.setItem("nm", snap.val().name);
+                    } else {
+                        const finalName = savedName || "User_" + Math.floor(1000 + Math.random() * 9000);
+                        db.ref('users/' + encodedEmail).set({ name: finalName, email: email });
+                        localStorage.setItem("myId", encodedEmail);
+                        localStorage.setItem("nm", finalName);
+                    }
+                    window.localStorage.removeItem('nameForSignUp');
+                    window.location.href = window.location.href.split('?')[0];
+                });
+            })
+            .catch((error) => {
+                alert("Login වීමට නොහැකි විය: " + error.message);
+            });
     }
 
     function start() {
         document.getElementById('auth-page').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
         document.getElementById('myn').innerText = "Hi, " + myNm;
-        if(myPh === ADMIN_PH) document.getElementById('adm-area').classList.remove('hidden');
         
-        db.ref('users/'+myPh+'/pic').on('value', snap => {
+        const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
+        if(myId === adminEncoded) document.getElementById('adm-area').classList.remove('hidden');
+        
+        db.ref('users/'+myId+'/pic').on('value', snap => {
             if(snap.exists()) document.getElementById('my-p-img').src = snap.val();
         });
         
@@ -203,7 +279,8 @@
                 const s = x.val();
                 const key = x.key;
                 rawStories[key] = s.text;
-                const canEdit = (s.uPh === myPh || myPh === ADMIN_PH);
+                const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
+                const canEdit = (s.uPh === myId || myId === adminEncoded);
                 
                 let textToShow = s.text;
                 let seeMoreBtn = "";
@@ -216,7 +293,7 @@
                     <div class="card">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <b>${s.user}</b>
-                            ${s.uPh !== myPh ? `<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>` : ''}
+                            ${s.uPh !== myId ? `<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>` : ''}
                         </div>
                         <div id="story-text-${key}" style="margin:10px 0; white-space: pre-wrap; font-size:14px;">${formatText(textToShow)}${seeMoreBtn}</div>
                         ${s.img ? `<img src="${s.img}" class="story-img">` : ''}
@@ -239,13 +316,9 @@
         if(!txt) return alert("Write something!");
 
         if(editKey) {
-            db.ref('stories/'+editKey).update({ text: txt }).then(() => {
-                closeModal();
-            });
+            db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); });
         } else {
-            db.ref('stories').push({ uPh:myPh, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => {
-                closeModal();
-            });
+            db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => { closeModal(); });
         }
     }
 
@@ -257,7 +330,7 @@
         db.ref('users').once('value', snap => {
             res.innerHTML = "";
             snap.forEach(u => {
-                if(u.val().name.toLowerCase().includes(q) && u.key !== myPh) {
+                if(u.val().name.toLowerCase().includes(q) && u.key !== myId) {
                     res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;">
                         <span>${u.val().name}</span>
                         <button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button>
@@ -268,12 +341,12 @@
     }
 
     function sendReq(to, toNm) {
-        db.ref('friends/'+to+'/'+myPh).set({status:'pending', name:myNm});
+        db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm});
         alert("Friend request sent to " + toNm);
     }
 
     function loadFriends() {
-        db.ref('friends/'+myPh).on('value', snap => {
+        db.ref('friends/'+myId).on('value', snap => {
             const c = document.getElementById('cons'); c.innerHTML = "";
             snap.forEach(f => {
                 const data = f.val();
@@ -299,20 +372,20 @@
         });
     }
 
-    function acc(ph, nm) {
-        db.ref('friends/'+myPh+'/'+ph).set({status:'accepted', name:nm});
-        db.ref('friends/'+ph+'/'+myPh).set({status:'accepted', name:myNm});
+    function acc(targetId, nm) {
+        db.ref('friends/'+myId+'/'+targetId).set({status:'accepted', name:nm});
+        db.ref('friends/'+targetId+'/'+myId).set({status:'accepted', name:myNm});
     }
 
-    function openChat(ph, name) {
-        activeChatPh = ph; 
+    function openChat(targetId, name) {
+        activeChatPh = targetId; 
         document.getElementById('chat-name').innerText = name;
         document.getElementById('chat-window').classList.remove('hidden');
-        const cid = myPh < ph ? myPh+"_"+ph : ph+"_"+myPh;
+        const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId;
         db.ref('messages/'+cid).on('value', s => {
             const mc = document.getElementById('msg-container'); mc.innerHTML = "";
             s.forEach(m => {
-                const side = m.val().sender === myPh ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;';
+                const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;';
                 mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px; word-wrap: break-word;">${formatText(m.val().msg)}</div>`;
             });
             mc.scrollTop = mc.scrollHeight;
@@ -322,12 +395,11 @@
     function sendMsg() {
         const msg = document.getElementById('msg-input').value.trim();
         if(!msg) return;
-        const cid = myPh < activeChatPh ? myPh+"_"+activeChatPh : activeChatPh+"_"+myPh;
-        db.ref('messages/'+cid).push({ sender: myPh, msg: msg, time: Date.now() });
+        const cid = myId < activeChatPh ? myId+"_"+activeChatPh : activeChatPh+"_"+myId;
+        db.ref('messages/'+cid).push({ sender: myId, msg: msg, time: Date.now() });
         document.getElementById('msg-input').value = "";
     }
 
-    // Helpers
     function pg(id, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
@@ -355,19 +427,21 @@
     function closeChat() { document.getElementById('chat-window').classList.add('hidden'); activeChatPh = ""; }
     function delStory(k) { if(confirm("Delete this story?")) db.ref('stories/'+k).remove(); }
     function logout() { localStorage.clear(); location.reload(); }
-    function tgl() { 
-        document.getElementById('ud').classList.toggle('hidden');
-        const isReg = !document.getElementById('ud').classList.contains('hidden');
-        document.getElementById('tgl-btn').innerText = isReg ? "Already have an account? Login" : "Don't have an account? Create one";
+    
+    function tglRegistration() { 
+        document.getElementById('name-field').classList.toggle('hidden');
+        const isReg = !document.getElementById('name-field').classList.contains('hidden');
+        document.getElementById('tgl-btn').innerText = isReg ? "Already have an account? Login" : "First time here? Register Account";
     }
+    
     function setNotice() { const m = prompt("Enter Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
 
-    // File Uploads
+    // Upload Listeners
     document.getElementById('p-pic-up').addEventListener('change', function(e) {
         const f = e.target.files[0];
         if(f){
             const r = new FileReader();
-            r.onload=(ev)=>db.ref('users/'+myPh+'/pic').set(ev.target.result);
+            r.onload=(ev)=>db.ref('users/'+myId+'/pic').set(ev.target.result);
             r.readAsDataURL(f);
         }
     });
@@ -390,6 +464,5 @@
         }
     });
 </script>
-
 </body>
 </html>

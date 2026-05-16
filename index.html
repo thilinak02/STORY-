@@ -28,8 +28,6 @@
         button { cursor: pointer; transition: 0.3s; }
         button:active { transform: scale(0.98); }
 
-        .google-btn { background: #fff; color: #000; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; margin-bottom: 15px; }
-
         #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
         .fr-btn { width: auto; padding: 6px 12px; font-size: 11px; background: #3498db; border: none; border-radius: 10px; color: white; }
         .p-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #333; border: 1px solid #444; }
@@ -52,25 +50,16 @@
             <p onclick="showRegisterView()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:20px;">First time here? <b>Register Account</b></p>
         </div>
 
-        <div class="card hidden" id="google-verify-section">
+        <div class="card hidden" id="register-section">
             <h3 style="text-align:center; margin-top:0;">Create Account</h3>
-            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Select your Google account to verify your real Gmail address.</p>
+            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Enter details. We will double-check your Gmail dynamically.</p>
             
-            <button class="google-btn" onclick="verifyGmailWithGooglePopup()">
-                <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" style="width:20px; height:20px;">
-                Verify via Google Popup
-            </button>
-            <p onclick="showLoginView()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa;">Back to Login</p>
-        </div>
-
-        <div class="card hidden" id="register-profile-section">
-            <h3 style="text-align:center; margin-top:0;">Set Account Details</h3>
-            <p style="font-size:12px; color:#4cd137; font-weight:bold; text-align:center;" id="verified-email-txt">Gmail Verified</p>
+            <input id="reg-email" type="email" placeholder="Enter your real Gmail address">
+            <input id="reg-name" placeholder="Choose a Username / Display Name">
+            <input id="reg-pwd" type="password" placeholder="Create a Password (Min 6 chars)">
             
-            <input id="new-user-name" placeholder="Choose a Username / Display Name">
-            <input id="new-user-pwd" type="password" placeholder="Create a Password (Min 6 chars)">
-            
-            <button onclick="completeRegistration()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">SAVE & ENTER APP</button>
+            <button onclick="registerWithVerification()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">REGISTER ACCOUNT</button>
+            <p onclick="showLoginView()" style="text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:20px;">Already have an account? <b>Login</b></p>
         </div>
     </div>
 
@@ -165,16 +154,38 @@
     let editKey = null;
     let storyImgData = "";
     let rawStories = {};
-    
-    let tempEmail = ""; 
 
     window.onload = () => {
         syncApp();
-        if(myId) {
-            start();
-        } else {
-            showLoginView();
-        }
+        
+        // ඇප් එකට එනකොට කලින් ලොග් වෙලා ඉන්නවද සහ ඊමේල් එක වෙරිෆයිඩ් ද බලනවා
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                if (user.emailVerified || user.email === ADMIN_EMAIL) {
+                    const encodedEmail = btoa(user.email.toLowerCase()).replace(/=/g, "");
+                    db.ref('users/' + encodedEmail).once('value', snap => {
+                        if(snap.exists()) {
+                            localStorage.setItem("myId", encodedEmail);
+                            localStorage.setItem("nm", snap.val().name);
+                            myId = encodedEmail;
+                            myNm = snap.val().name;
+                            start();
+                        }
+                    });
+                } else {
+                    // ලින්ක් එක ක්ලික් කරලා නැත්නම් ඇතුලට ගන්නෑ
+                    alert("කරුණාකර ඔබගේ Gmail ලිපිනයට පැමිණි Verification ලින්ක් එක ක්ලික් කර ගිණුම තහවුරු කරන්න.");
+                    auth.signOut();
+                    showLoginView();
+                }
+            } else {
+                if(myId) {
+                    start();
+                } else {
+                    showLoginView();
+                }
+            }
+        });
     };
 
     function formatText(t) { 
@@ -193,7 +204,7 @@
         });
     }
 
-    // 1. GMAIL + PASSWORD LOGIN
+    // 1. LOGIN SYSTEM
     function loginWithEmailPwd() {
         const email = document.getElementById('login-email').value.trim().toLowerCase();
         const pwd = document.getElementById('login-pwd').value.trim();
@@ -202,98 +213,82 @@
 
         auth.signInWithEmailAndPassword(email, pwd)
             .then((userCredential) => {
-                const encodedEmail = btoa(email).replace(/=/g, "");
-                db.ref('users/' + encodedEmail).once('value', snap => {
-                    let currentName = "User";
-                    if (snap.exists()) {
-                        currentName = snap.val().name;
-                    } else if (email === ADMIN_EMAIL) {
-                        currentName = "Admin";
-                        db.ref('users/' + encodedEmail).update({ name: "Admin", email: email });
-                    }
-                    localStorage.setItem("myId", encodedEmail);
-                    localStorage.setItem("nm", currentName);
-                    start();
-                });
+                const user = userCredential.user;
+                if (user.emailVerified || email === ADMIN_EMAIL) {
+                    const encodedEmail = btoa(email).replace(/=/g, "");
+                    db.ref('users/' + encodedEmail).once('value', snap => {
+                        let currentName = "User";
+                        if (snap.exists()) {
+                            currentName = snap.val().name;
+                        }
+                        localStorage.setItem("myId", encodedEmail);
+                        localStorage.setItem("nm", currentName);
+                        myId = encodedEmail;
+                        myNm = currentName;
+                        start();
+                    });
+                } else {
+                    alert("ඔබේ ගිණුම තවමත් තහවුරු කර නැත! කරුණාකර ඔබගේ Gmail inbox එක පරික්ෂා කර එහි ඇති ලින්ක් එක ක්ලික් කරන්න.");
+                    auth.signOut();
+                }
             })
             .catch((error) => {
                 alert("Login Failed: " + error.message);
             });
     }
 
-    // 2. GOOGLE POPUP VERIFICATION (ආරක්ෂිත සහ සජීවී ක්‍රමය)
-    function verifyGmailWithGooglePopup() {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
+    // 2. REGISTER SYSTEM WITH VERIFICATION LINK (හොර එකවුන්ට් වළකන ක්‍රමය)
+    function registerWithVerification() {
+        const email = document.getElementById('reg-email').value.trim().toLowerCase();
+        const name = document.getElementById('reg-name').value.trim();
+        const pwd = document.getElementById('reg-pwd').value.trim();
 
-        auth.signInWithPopup(provider)
-            .then((result) => {
-                if (result.user) {
-                    tempEmail = result.user.email.toLowerCase();
-                    const encodedEmail = btoa(tempEmail).replace(/=/g, "");
-                    
-                    // දැනටමත් මේ ජීමේල් එකෙන් එකවුන්ට් එකක් තියෙනවද බලනවා
-                    db.ref('users/' + encodedEmail).once('value', snap => {
-                        if (snap.exists()) {
-                            // දැනටමත් ඉන්න කෙනෙක් නම් කෙලින්ම ඇතුළට ගන්නවා
-                            localStorage.setItem("myId", encodedEmail);
-                            localStorage.setItem("nm", snap.val().name);
-                            start();
-                        } else {
-                            // අලුත් කෙනෙක් නම්, ආරක්ෂාව සඳහා සයින්-අවුට් කරලා විස්තර පුරවන ෆෝම් එක පෙන්වනවා
-                            auth.signOut().then(() => {
-                                document.getElementById('google-verify-section').classList.add('hidden');
-                                document.getElementById('verified-email-txt').innerText = "Verified: " + tempEmail;
-                                document.getElementById('register-profile-section').classList.remove('hidden');
-                            });
-                        }
-                    });
-                }
-            })
-            .catch((error) => {
-                alert("Google Auth Failed: " + error.message);
-            });
-    }
-
-    // 3. COMPLETE REGISTER WITH PASSWORD
-    function completeRegistration() {
-        const name = document.getElementById('new-user-name').value.trim();
-        const pwd = document.getElementById('new-user-pwd').value.trim();
-
-        if (!name) return alert("කරුණාකර Username එකක් ඇතුළත් කරන්න.");
+        if (!email || !name || !pwd) return alert("කරුණාකර සියලුම විස්තර ඇතුළත් කරන්න.");
         if (pwd.length < 6) return alert("Password එක සඳහා අවම වශයෙන් අකුරු/ඉලක්කම් 6ක්වත් දෙන්න.");
 
-        auth.createUserWithEmailAndPassword(tempEmail, pwd)
-            .then((userCredential) => {
-                const encodedEmail = btoa(tempEmail).replace(/=/g, "");
-                const isAdmin = (tempEmail === ADMIN_EMAIL);
-                const finalName = isAdmin ? "Admin" : name;
+        const encodedEmail = btoa(email).replace(/=/g, "");
 
-                db.ref('users/' + encodedEmail).set({
-                    name: finalName,
-                    email: tempEmail
-                }).then(() => {
-                    localStorage.setItem("myId", encodedEmail);
-                    localStorage.setItem("nm", finalName);
-                    start();
-                });
-            })
-            .catch((error) => {
-                alert("Account Creation Failed: " + error.message);
+        // ඩේටාබේස් එකේ දැනටමත් ඉන්නවද බලනවා
+        db.ref('users/' + encodedEmail).once('value', snap => {
+            if (snap.exists()) {
+                alert("මේ Gmail ලිපිනයෙන් දැනටමත් ගිණුමක් සාදා ඇත. කරුණාකර Login වෙන්න.");
                 showLoginView();
-            });
+            } else {
+                // Firebase එකේ Account එක හදනවා
+                auth.createUserWithEmailAndPassword(email, pwd)
+                    .then((userCredential) => {
+                        // එකවුන්ට් එක හැදූ සැනින් සත්‍ය Gmail එකදැයි බලන්න ලින්ක් එකක් යවනවා
+                        userCredential.user.sendEmailVerification()
+                            .then(() => {
+                                const isAdmin = (email === ADMIN_EMAIL);
+                                const finalName = isAdmin ? "Admin" : name;
+
+                                // තොරතුරු ඩේටාබේස් එකට දානවා
+                                db.ref('users/' + encodedEmail).set({
+                                    name: finalName,
+                                    email: email
+                                }).then(() => {
+                                    alert("ලියාපදිංචිය සාර්ථකයි! ඔබගේ " + email + " ලිපිනයට Verification ලින්ක් එකක් එවා ඇත. කරුණාකර ඔබගේ Gmail ඇප් එක විවෘත කර එම ලින්ක් එක ක්ලික් කර ගිණුම සක්‍රීය කරගන්න.");
+                                    auth.signOut();
+                                    showLoginView();
+                                });
+                            });
+                    })
+                    .catch((error) => {
+                        alert("Registration Failed: " + error.message);
+                    });
+            }
+        });
     }
 
     function showRegisterView() {
         document.getElementById('login-section').classList.add('hidden');
-        document.getElementById('register-profile-section').classList.add('hidden');
-        document.getElementById('google-verify-section').classList.remove('hidden');
+        document.getElementById('register-section').classList.remove('hidden');
         document.getElementById('auth-page').classList.remove('hidden');
     }
 
     function showLoginView() {
-        document.getElementById('google-verify-section').classList.add('hidden');
-        document.getElementById('register-profile-section').classList.add('hidden');
+        document.getElementById('register-section').classList.add('hidden');
         document.getElementById('login-section').classList.remove('hidden');
         document.getElementById('auth-page').classList.remove('hidden');
     }

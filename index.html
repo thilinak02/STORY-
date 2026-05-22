@@ -45,8 +45,7 @@
 <body>
 
 <div class="content-wrap">
-    <div id="auth-page" class="hidden" style="padding:40px;">
-        
+    <div id="auth-page" style="padding:40px;">
         <div class="card" id="login-section">
             <h2 style="text-align:center;">STORY PRO</h2>
             <p style="text-align:center; font-size:13px; color:#aaa; margin-bottom:20px;">Login with your Gmail & Password</p>
@@ -55,18 +54,16 @@
             <input id="login-pwd" type="password" placeholder="Enter Password">
             
             <button onclick="loginWithEmailPwd()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">LOGIN</button>
-            
             <p onclick="showForgotPwdView()" style="text-align:center; font-size:12px; cursor:pointer; color:#e74c3c; margin-top:15px; font-weight:bold;">Forgot Password?</p>
-            
             <p onclick="showRegisterView()" class="auth-link">First time here? <b>Register Account</b></p>
         </div>
 
         <div class="card hidden" id="register-section">
             <h3 style="text-align:center; margin-top:0;">Create Account</h3>
-            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Enter details. We will double-check your Gmail dynamically.</p>
+            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Enter details to register.</p>
             
             <input id="reg-email" type="email" placeholder="Enter your real Gmail address">
-            <input id="reg-name" placeholder="Choose a Username / Display Name">
+            <input id="reg-name" placeholder="Choose a Username">
             <input id="reg-pwd" type="password" placeholder="Create a Password (Min 6 chars)">
             
             <button onclick="registerWithVerification()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">REGISTER ACCOUNT</button>
@@ -75,10 +72,8 @@
 
         <div class="card hidden" id="forgot-pwd-section">
             <h3 style="text-align:center; margin-top:0;">Reset Password</h3>
-            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Enter your Gmail address below. We will send you a secure link to reset your password.</p>
-            
+            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Enter your Gmail address below.</p>
             <input id="forgot-email" type="email" placeholder="Enter your Gmail address">
-            
             <button onclick="sendPasswordReset()" style="background:#e67e22; border:none; font-weight:bold; margin-top:15px;">SEND RESET LINK</button>
             <p onclick="showLoginView()" class="auth-link">Back to <b>Login</b></p>
         </div>
@@ -109,12 +104,10 @@
                 <div id="tab-flist" class="f-tab active" onclick="switchFriendTab('flist')">Friend List</div>
                 <div id="tab-freq" class="f-tab" onclick="switchFriendTab('freq')">Requests & Search</div>
             </div>
-
             <div id="friend-list-area">
                 <h4 style="margin:15px;">My Friends</h4>
                 <div id="cons"></div>
             </div>
-
             <div id="friend-req-area" class="hidden">
                 <div style="padding: 10px;">
                     <input type="text" id="search-user" placeholder="Search new friends by name..." onkeyup="searchUsers()">
@@ -174,7 +167,6 @@
 </div>
 
 <script>
-    // Firebase Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
         authDomain: "story-ceca0.firebaseapp.com",
@@ -195,13 +187,11 @@
     let myNm = localStorage.getItem("nm") || "";
     let activeChatPh = "";
     let editKey = null;
-    let storyImgData = ""; // නැවත Base64 ක්‍රමයට සකස් කරන ලදී
+    let storyBase64Img = ""; 
     let rawStories = {};
     let fullStoriesObjects = {}; 
 
     window.onload = () => {
-        syncApp();
-        
         auth.onAuthStateChanged((user) => {
             if (user) {
                 if (user.emailVerified || user.email === ADMIN_EMAIL) {
@@ -213,150 +203,20 @@
                             myId = encodedEmail;
                             myNm = snap.val().name;
                             start();
-                        } else {
-                            logout();
-                        }
+                        } else { logout(); }
                     });
                 } else {
-                    alert("කරුණාකර ඔබගේ Gmail ලිපිනයට පැමිණි Verification ලින්ක් එක ක්ලික් කර ගිණුම තහවුරු කරන්න.");
+                    alert("කරුණාකර ඔබගේ Gmail ලිපිනයට පැමිණි Verification ලින්ක් එක ක්ලික් කරන්න.");
                     auth.signOut();
                     showLoginView();
                 }
-            } else {
-                if(myId) {
-                    db.ref('users/' + myId).once('value', snap => {
-                        if(snap.exists()) { start(); } else { logout(); }
-                    });
-                } else {
-                    showLoginView();
-                }
-            }
+            } else { showLoginView(); }
         });
     };
 
     function formatText(t) { 
         if(!t) return "";
         return t.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); 
-    }
-
-    function syncApp() {
-        db.ref('appConfig/bgImage').on('value', snap => { if(snap.exists()) document.body.style.backgroundImage = `url('${snap.val()}')`; });
-        db.ref('appConfig/notice').on('value', snap => {
-            const bar = document.getElementById('notice-bar');
-            if(snap.exists() && snap.val().trim() !== "") { 
-                bar.innerHTML = "📢 " + formatText(snap.val()); 
-                bar.style.display = "block"; 
-            } else { bar.style.display = "none"; }
-        });
-    }
-
-    // LOGIN SYSTEM
-    function loginWithEmailPwd() {
-        const email = document.getElementById('login-email').value.trim().toLowerCase();
-        const pwd = document.getElementById('login-pwd').value.trim();
-
-        if (!email || !pwd) return alert("කරුණාකර Gmail ලිපිනය සහ Password ඇතුළත් කරන්න.");
-
-        auth.signInWithEmailAndPassword(email, pwd)
-            .then((userCredential) => {
-                const user = userCredential.user;
-                if (user.emailVerified || email === ADMIN_EMAIL) {
-                    const encodedEmail = btoa(email).replace(/=/g, "");
-                    db.ref('users/' + encodedEmail).once('value', snap => {
-                        let currentName = "User";
-                        if (snap.exists()) {
-                            currentName = snap.val().name;
-                        }
-                        localStorage.setItem("myId", encodedEmail);
-                        localStorage.setItem("nm", currentName);
-                        myId = encodedEmail;
-                        myNm = currentName;
-                        start();
-                    });
-                } else {
-                    alert("ඔබේ ගිණුම තවමත් තහවුරු කර නැත! කරුණාකර ඔබගේ Gmail inbox එක පරික්ෂා කර එහි ඇති ලින්ක් එක ක්ලික් කරන්න.");
-                    auth.signOut();
-                }
-            })
-            .catch((error) => {
-                alert("Login Failed: " + error.message);
-            });
-    }
-
-    // REGISTER SYSTEM
-    function registerWithVerification() {
-        const email = document.getElementById('reg-email').value.trim().toLowerCase();
-        const name = document.getElementById('reg-name').value.trim();
-        const pwd = document.getElementById('reg-pwd').value.trim();
-
-        if (!email || !name || !pwd) return alert("කරුණාකර සියලුම විස්තර ඇතුළත් කරන්න.");
-        if (pwd.length < 6) return alert("Password එක සඳහා අවම වශයෙන් අකුරු/ඉලක්කම් 6ක්වත් දෙන්න.");
-
-        const encodedEmail = btoa(email).replace(/=/g, "");
-
-        db.ref('users/' + encodedEmail).once('value', snap => {
-            if (snap.exists()) {
-                alert("මේ Gmail ලිපිනයෙන් දැනටමත් ගිණුමක් සාදා ඇත. කරුණාකර Login වෙන්න.");
-                showLoginView();
-            } else {
-                auth.createUserWithEmailAndPassword(email, pwd)
-                    .then((userCredential) => {
-                        userCredential.user.sendEmailVerification()
-                            .then(() => {
-                                const isAdmin = (email === ADMIN_EMAIL);
-                                const finalName = isAdmin ? "Admin" : name;
-
-                                db.ref('users/' + encodedEmail).set({
-                                    name: finalName,
-                                    email: email
-                                }).then(() => {
-                                    alert("ලියාපදිංචිය සාර්ථකයි! ඔබගේ " + email + " ලිපිනයට Verification ලින්ක් එකක් එවා ඇත. කරුණාකර ඔබගේ Gmail ඇප් එක විවෘත කර එම ලින්ක් එක ක්ලික් කර ගිණුම සක්‍රීය කරගන්න.");
-                                    auth.signOut();
-                                    showLoginView();
-                                });
-                            });
-                    })
-                    .catch((error) => {
-                        alert("Registration Failed: " + error.message);
-                    });
-            }
-        });
-    }
-
-    // FORGOT PASSWORD FUNCTION
-    function sendPasswordReset() {
-        const email = document.getElementById('forgot-email').value.trim().toLowerCase();
-        if (!email) return alert("කරුණාකර ඔබගේ Gmail ලිපිනය ඇතුළත් කරන්න.");
-
-        auth.sendPasswordResetEmail(email)
-            .then(() => {
-                alert("Password එක වෙනස් කිරීමට අවශ්‍ය ආරක්ෂිත ලින්ක් එක සාර්ථකව ඔබගේ " + email + " ලිපිනයට එවන ලදී. කරුණාකර Inbox/Spam ෆෝල්ඩර පරික්ෂා කරන්න.");
-                showLoginView();
-            })
-            .catch((error) => {
-                alert("Error: " + error.message);
-            });
-    }
-
-    function showRegisterView() {
-        document.getElementById('login-section').classList.add('hidden');
-        document.getElementById('forgot-pwd-section').classList.add('hidden');
-        document.getElementById('register-section').classList.remove('hidden');
-        document.getElementById('auth-page').classList.remove('hidden');
-    }
-
-    function showLoginView() {
-        document.getElementById('register-section').classList.add('hidden');
-        document.getElementById('forgot-pwd-section').classList.add('hidden');
-        document.getElementById('login-section').classList.remove('hidden');
-        document.getElementById('auth-page').classList.remove('hidden');
-    }
-
-    function showForgotPwdView() {
-        document.getElementById('login-section').classList.add('hidden');
-        document.getElementById('register-section').classList.add('hidden');
-        document.getElementById('forgot-pwd-section').classList.remove('hidden');
-        document.getElementById('auth-page').classList.remove('hidden');
     }
 
     function start() {
@@ -367,6 +227,15 @@
         const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
         if(myId === adminEncoded) document.getElementById('adm-area').classList.remove('hidden');
         
+        db.ref('appConfig/bgImage').on('value', snap => { if(snap.exists()) document.body.style.backgroundImage = `url('${snap.val()}')`; });
+        db.ref('appConfig/notice').on('value', snap => {
+            const bar = document.getElementById('notice-bar');
+            if(snap.exists() && snap.val().trim() !== "") { 
+                bar.innerHTML = "📢 " + formatText(snap.val()); 
+                bar.style.display = "block"; 
+            } else { bar.style.display = "none"; }
+        });
+
         db.ref('users/'+myId+'/pic').once('value', snap => {
             if(snap.exists()) document.getElementById('my-p-img').src = snap.val();
         });
@@ -375,20 +244,65 @@
         loadFriends();
     }
 
-    function switchFriendTab(tab) {
-        document.getElementById('tab-flist').classList.remove('active');
-        document.getElementById('tab-freq').classList.remove('active');
-        document.getElementById('friend-list-area').classList.add('hidden');
-        document.getElementById('friend-req-area').classList.add('hidden');
-
-        if(tab === 'flist') {
-            document.getElementById('tab-flist').classList.add('active');
-            document.getElementById('friend-list-area').classList.remove('hidden');
-        } else {
-            document.getElementById('tab-freq').classList.add('active');
-            document.getElementById('friend-req-area').classList.remove('hidden');
-        }
+    function loginWithEmailPwd() {
+        const email = document.getElementById('login-email').value.trim().toLowerCase();
+        const pwd = document.getElementById('login-pwd').value.trim();
+        if (!email || !pwd) return alert("කරුණාකර Gmail සහ Password ඇතුළත් කරන්න.");
+        auth.signInWithEmailAndPassword(email, pwd)
+            .then((userCredential) => {
+                const user = userCredential.user;
+                if (user.emailVerified || email === ADMIN_EMAIL) {
+                    const encodedEmail = btoa(email).replace(/=/g, "");
+                    db.ref('users/' + encodedEmail).once('value', snap => {
+                        let currentName = "User";
+                        if (snap.exists()) currentName = snap.val().name;
+                        localStorage.setItem("myId", encodedEmail);
+                        localStorage.setItem("nm", currentName);
+                        myId = encodedEmail;
+                        myNm = currentName;
+                        start();
+                    });
+                } else {
+                    alert("ඔබේ ගිණුම තවමත් තහවුරු කර නැත!");
+                    auth.signOut();
+                }
+            }).catch(error => alert("Login Failed: " + error.message));
     }
+
+    function registerWithVerification() {
+        const email = document.getElementById('reg-email').value.trim().toLowerCase();
+        const name = document.getElementById('reg-name').value.trim();
+        const pwd = document.getElementById('reg-pwd').value.trim();
+        if (!email || !name || !pwd) return alert("කරුණාකර සියලුම විස්තර ඇතුළත් කරන්න.");
+        const encodedEmail = btoa(email).replace(/=/g, "");
+        db.ref('users/' + encodedEmail).once('value', snap => {
+            if (snap.exists()) {
+                alert("මේ Gmail ලිපිනයෙන් දැනටමත් ගිණුමක් සාදා ඇත.");
+            } else {
+                auth.createUserWithEmailAndPassword(email, pwd)
+                    .then((userCredential) => {
+                        userCredential.user.sendEmailVerification().then(() => {
+                            db.ref('users/' + encodedEmail).set({ name: name, email: email }).then(() => {
+                                alert("Verification ලින්ක් එක Gmail එකට එවන ලදී!");
+                                auth.signOut();
+                                showLoginView();
+                            });
+                        });
+                    }).catch(error => alert("Failed: " + error.message));
+            }
+        });
+    }
+
+    function sendPasswordReset() {
+        const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+        if (!email) return alert("Enter Gmail!");
+        auth.sendPasswordResetEmail(email).then(() => { alert("Sent!"); showLoginView(); });
+    }
+
+    function showRegisterView() { document.getElementById('login-section').classList.add('hidden'); document.getElementById('register-section').classList.remove('hidden'); }
+    function showLoginView() { document.getElementById('register-section').classList.add('hidden'); document.getElementById('forgot-pwd-section').classList.add('hidden'); document.getElementById('login-section').classList.remove('hidden'); document.getElementById('auth-page').classList.remove('hidden'); document.getElementById('main-app').classList.add('hidden'); }
+    function showForgotPwdView() { document.getElementById('login-section').classList.add('hidden'); document.getElementById('forgot-pwd-section').classList.remove('hidden'); }
+    function switchFriendTab(tab) { document.getElementById('tab-flist').classList.toggle('active', tab==='flist'); document.getElementById('tab-freq').classList.toggle('active', tab==='freq'); document.getElementById('friend-list-area').classList.toggle('hidden', tab!=='flist'); document.getElementById('friend-req-area').classList.toggle('hidden', tab!=='freq'); }
 
     function loadStories() {
         db.ref('stories').on('value', snap => {
@@ -396,20 +310,14 @@
             fullStoriesObjects = {}; 
             snap.forEach(x => {
                 const s = x.val(); const key = x.key; 
-                rawStories[key] = s.text;
-                fullStoriesObjects[key] = s;
-
+                rawStories[key] = s.text; fullStoriesObjects[key] = s;
                 let storyTitle = s.text.split('\n')[0];
                 if(storyTitle.length > 30) storyTitle = storyTitle.substring(0, 30) + "...";
-                
                 feed.insertAdjacentHTML('afterbegin', `
                     <div class="card catalog-item" onclick="viewFullStory('${key}')">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span>Author: <b>${s.user}</b></span>
-                        </div>
+                        <span>Author: <b>${s.user}</b></span>
                         <h3 style="margin:10px 0 5px 0; color:var(--viber); font-size:16px;">📖 ${storyTitle}</h3>
                         ${s.img ? `<img src="${s.img}" class="story-img" style="max-height:150px;">` : ''}
-                        <div style="font-size:11px; color:#666; text-align:right; margin-top:5px;">Tap to read full story</div>
                     </div>
                 `);
             });
@@ -417,53 +325,26 @@
     }
 
     function viewFullStory(key) {
-        const s = fullStoriesObjects[key];
-        if(!s) return;
-        
+        const s = fullStoriesObjects[key]; if(!s) return;
         const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
         const canEdit = (s.uPh === myId || myId === adminEncoded);
-        
         document.getElementById('detail-author').innerText = s.user + "'s Story";
-        const container = document.getElementById('detail-container');
-        
-        container.innerHTML = `
+        document.getElementById('detail-container').innerHTML = `
             <div class="card" style="background:transparent; border:none;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2>${s.user}</h2>
-                    ${s.uPh !== myId ? `<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>` : ''}
-                </div>
+                <h2>${s.user}</h2>
                 <hr style="border-color:#222; margin:15px 0;">
                 <div style="white-space: pre-wrap; font-size:16px; line-height:1.6; margin-bottom:20px;">${formatText(s.text)}</div>
-                ${s.img ? `<img src="${s.img}" style="width:100%; border-radius:10px; margin-bottom:20px;">` : ''}
-                
-                ${canEdit ? `
-                    <div style="text-align:right; margin-top:20px; border-top:1px solid #222; padding-top:15px;">
-                        <button onclick="triggerEditFromDetail('${key}')" style="width:auto; display:inline-block; background:#27ae60; margin-right:10px; padding:8px 20px;">✏️ Edit</button>
-                        <button onclick="triggerDeleteFromDetail('${key}')" style="width:auto; display:inline-block; background:#c0392b; padding:8px 20px;">🗑️ Delete</button>
-                    </div>
-                ` : ''}
+                ${s.img ? `<img src="${s.img}" style="width:100%; border-radius:10px;">` : ''}
+                ${canEdit ? `<button onclick="triggerDelete('${key}')" style="background:#c0392b; margin-top:20px;">🗑️ Delete</button>` : ''}
             </div>
         `;
         document.getElementById('story-detail-window').classList.remove('hidden');
     }
 
-    function triggerEditFromDetail(key) {
-        closeStoryDetail();
-        editStory(key);
-    }
+    function triggerDelete(key) { if(confirm("Delete story?")) { db.ref('stories/'+key).remove(); closeStoryDetail(); } }
+    function closeStoryDetail() { document.getElementById('story-detail-window').classList.add('hidden'); }
 
-    function triggerDeleteFromDetail(key) {
-        if(confirm("Delete this story?")) {
-            db.ref('stories/'+key).remove();
-            closeStoryDetail();
-        }
-    }
-
-    function closeStoryDetail() {
-        document.getElementById('story-detail-window').classList.add('hidden');
-    }
-
-    // ඩේටාබේස් එකටම කෙලින්ම සේව් වන ලෙස සකස් කළ සරල පෝස්ට් සිස්ටම් එක
+    // STORAGE අවශ්‍ය නොවන - කෙලින්ම DATABASE එකට දාන POST FUNCTION එක
     function postStory() { 
         const txt = document.getElementById('si').value.trim(); 
         if(!txt) return alert("Write something!"); 
@@ -472,58 +353,49 @@
         btn.innerText = "Posting..."; btn.disabled = true;
 
         if(editKey) { 
-            db.ref('stories/'+editKey).update({ text: txt })
-            .then(() => { closeModal(); btn.innerText="Post Now"; btn.disabled=false; }); 
+            db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); btn.innerText="Post Now"; btn.disabled=false; }); 
         } else { 
-            db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:storyImgData, time:Date.now() })
-            .then(() => { closeModal(); btn.innerText="Post Now"; btn.disabled=false; }); 
+            db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:storyBase64Img, time:Date.now() })
+            .then(() => { closeModal(); btn.innerText="Post Now"; btn.disabled=false; });
         } 
     }
 
     function searchUsers() { const q = document.getElementById('search-user').value.toLowerCase(); const res = document.getElementById('search-results'); if(q.length < 2) { res.innerHTML = ""; return; } db.ref('users').once('value', snap => { res.innerHTML = ""; snap.forEach(u => { if(u.val().name.toLowerCase().includes(q) && u.key !== myId) { res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;"><span>${u.val().name}</span><button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button></div>`; } }); }); }
-    
-    function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm}); alert("Friend request sent to " + toNm); }
+    function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm}); alert("Sent to " + toNm); }
     
     function loadFriends() { 
         db.ref('friends/'+myId).on('value', snap => { 
             const c = document.getElementById('cons'); c.innerHTML = ""; 
             const reqsList = document.getElementById('reqs-list'); reqsList.innerHTML = "";
             let hasRequests = false;
-
             snap.forEach(f => { 
                 const data = f.val(); 
                 if(data.status === 'accepted') { 
-                    db.ref('users/'+f.key+'/pic').once('value', p => { 
-                        const img = p.exists() ? p.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png"; 
-                        c.insertAdjacentHTML('beforeend', ` <div class="card" onclick="openChat('${f.key}','${data.name}')" style="display:flex; align-items:center; gap:12px; cursor:pointer;"><img src="${img}" class="p-img"><div><b>${data.name}</b><div style="font-size:10px; color:#888;">Tap to chat</div></div></div> `); 
-                    }); 
+                    c.insertAdjacentHTML('beforeend', ` <div class="card" onclick="openChat('${f.key}','${data.name}')" style="cursor:pointer;"><b>${data.name}</b></div> `); 
                 } else if(data.status === 'pending') { 
                     hasRequests = true;
-                    reqsList.insertAdjacentHTML('beforeend', ` <div class="card" style="border:1px solid #f1c40f; background:rgba(0,0,0,0.4);"><p style="margin:0 0 10px 0; font-size:13px;">Friend Request from: <b>${data.name}</b></p><button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${data.name}')">Accept Request</button></div> `); 
+                    reqsList.insertAdjacentHTML('beforeend', ` <div class="card"><p>Request from: <b>${data.name}</b></p><button onclick="acc('${f.key}','${data.name}')">Accept</button></div> `); 
                 } 
             }); 
-            if(!hasRequests) {
-                reqsList.innerHTML = `<p style="text-align:center; color:#666; font-size:13px; margin-top:20px;">No pending requests</p>`;
-            }
+            if(!hasRequests) reqsList.innerHTML = `<p style="text-align:center; color:#666;">No pending requests</p>`;
         }); 
     }
 
     function acc(targetId, nm) { db.ref('friends/'+myId+'/'+targetId).set({status:'accepted', name:nm}); db.ref('friends/'+targetId+'/'+myId).set({status:'accepted', name:myNm}); }
-    function openChat(targetId, name) { activeChatPh = targetId; document.getElementById('chat-name').innerText = name; document.getElementById('chat-window').classList.remove('hidden'); const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId; db.ref('messages/'+cid).on('value', s => { const mc = document.getElementById('msg-container'); mc.innerHTML = ""; s.forEach(m => { const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;'; mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px; word-wrap: break-word;">${formatText(m.val().msg)}</div>`; }); mc.scrollTop = mc.scrollHeight; }); }
+    function openChat(targetId, name) { activeChatPh = targetId; document.getElementById('chat-name').innerText = name; document.getElementById('chat-window').classList.remove('hidden'); const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId; db.ref('messages/'+cid).on('value', s => { const mc = document.getElementById('msg-container'); mc.innerHTML = ""; s.forEach(m => { const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;'; mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px;">${formatText(m.val().msg)}</div>`; }); mc.scrollTop = mc.scrollHeight; }); }
     function sendMsg() { const msg = document.getElementById('msg-input').value.trim(); if(!msg) return; const cid = myId < activeChatPh ? myId+"_"+activeChatPh : activeChatPh+"_"+myId; db.ref('messages/'+cid).push({ sender: myId, msg: msg, time: Date.now() }); document.getElementById('msg-input').value = ""; }
     function pg(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
-    function openStoryModal() { editKey = null; storyImgData = ""; document.getElementById('si').value = ""; document.getElementById('m-title').innerText = "New Post"; document.getElementById('img-field').classList.remove('hidden'); document.getElementById('sm').classList.remove('hidden'); }
-    function editStory(k) { editKey = k; document.getElementById('m-title').innerText = "Edit Post"; document.getElementById('si').value = rawStories[k]; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); }
+    function openStoryModal() { editKey = null; storyBase64Img = ""; document.getElementById('si').value = ""; document.getElementById('m-title').innerText = "New Post"; document.getElementById('img-field').classList.remove('hidden'); document.getElementById('sm').classList.remove('hidden'); }
     function closeModal() { document.getElementById('sm').classList.add('hidden'); }
     function closeChat() { document.getElementById('chat-window').classList.add('hidden'); activeChatPh = ""; }
     function logout() { auth.signOut(); localStorage.clear(); location.reload(); }
     function setNotice() { const m = prompt("Enter Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
 
-    // පැරණි ක්‍රමයටම Profile Picture දත්ත ද ඩේටාබේස් එකටම දමයි
+    // Profile Pic Base64 ක්‍රමයට සිදුවේ
     document.getElementById('p-pic-up').addEventListener('change', function(e) { 
         const f = e.target.files[0]; 
         if(f){ 
-            const r = new FileReader(); 
+            const r = new FileReader();
             r.onload = (ev) => {
                 db.ref('users/'+myId+'/pic').set(ev.target.result);
                 document.getElementById('my-p-img').src = ev.target.result;
@@ -534,12 +406,12 @@
 
     document.getElementById('bg-upload').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); } });
     
-    // පින්තූරය ඩේටාබේස් එකට යාමට Base64 string එකක් බවට පත් කරයි
+    // Story Image Base64 ක්‍රමයට සිදුවේ
     document.getElementById('img-input').addEventListener('change', function(e) { 
         const f = e.target.files[0]; 
         if(f){ 
             const r = new FileReader();
-            r.onload = (ev) => { storyImgData = ev.target.result; };
+            r.onload = (ev) => { storyBase64Img = ev.target.result; };
             r.readAsDataURL(f);
         } 
     });

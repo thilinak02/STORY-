@@ -28,12 +28,19 @@
         button { cursor: pointer; transition: 0.3s; }
         button:active { transform: scale(0.98); }
 
-        #chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
+        #chat-window, #story-detail-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
         .fr-btn { width: auto; padding: 6px 12px; font-size: 11px; background: #3498db; border: none; border-radius: 10px; color: white; }
         .p-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #333; border: 1px solid #444; }
         .see-more { color: #3498db; cursor: pointer; font-weight: bold; margin-left: 5px; }
         .auth-link { text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:15px; }
         .auth-link b { color: var(--viber); }
+
+        /* New Styles for Friend Tabs & Catalog */
+        .friend-tabs { display: flex; gap: 10px; margin: 10px; }
+        .f-tab { flex: 1; padding: 10px; text-align: center; background: #222; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: bold; border: 1px solid #333; }
+        .f-tab.active { background: var(--viber); border-color: var(--viber); color: white; }
+        .catalog-item { cursor: pointer; transition: 0.2s; }
+        .catalog-item:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body>
@@ -99,16 +106,31 @@
         <div id="notice-bar"></div>
 
         <div id="p-chats" class="page">
-            <div style="padding: 10px;">
-                <input type="text" id="search-user" placeholder="Search friends by name..." onkeyup="searchUsers()">
-                <div id="search-results"></div>
+            <!-- Friend Tabs system -->
+            <div class="friend-tabs">
+                <div id="tab-flist" class="f-tab active" onclick="switchFriendTab('flist')">Friend List</div>
+                <div id="tab-freq" class="f-tab" onclick="switchFriendTab('freq')">Requests & Search</div>
             </div>
-            <h4 style="margin:15px;">Messages</h4>
-            <div id="cons"></div>
+
+            <!-- Friend List Area -->
+            <div id="friend-list-area">
+                <h4 style="margin:15px;">My Friends</h4>
+                <div id="cons"></div>
+            </div>
+
+            <!-- Friend Requests & Search Area -->
+            <div id="friend-req-area" class="hidden">
+                <div style="padding: 10px;">
+                    <input type="text" id="search-user" placeholder="Search new friends by name..." onkeyup="searchUsers()">
+                    <div id="search-results"></div>
+                </div>
+                <h4 style="margin:15px;">Incoming Requests</h4>
+                <div id="reqs-list"></div>
+            </div>
         </div>
 
         <div id="p-stories" class="page hidden">
-            <h4 style="margin:15px;">Community Feed</h4>
+            <h4 style="margin:15px;">Stories Catalog</h4>
             <div id="feed"></div>
         </div>
 
@@ -145,6 +167,17 @@
     </div>
 </div>
 
+<!-- Full Story Detail Window (Catalog View Support) -->
+<div id="story-detail-window" class="hidden">
+    <header>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <span onclick="closeStoryDetail()" style="font-size:24px; cursor:pointer;">⬅</span> 
+            <b id="detail-author">Story Detail</b>
+        </div>
+    </header>
+    <div id="detail-container" style="flex:1; overflow-y:auto; padding:15px; background:#050505;"></div>
+</div>
+
 <script>
     // Firebase Configuration
     const firebaseConfig = {
@@ -169,6 +202,7 @@
     let editKey = null;
     let storyImgData = "";
     let rawStories = {};
+    let fullStoriesObjects = {}; // To keep original data for catalog click
 
     window.onload = () => {
         syncApp();
@@ -290,7 +324,7 @@
         });
     }
 
-    // FORGOT PASSWORD FUNCTION (Password අලුතින් හදාගන්න ලින්ක් එක යවන තැන)
+    // FORGOT PASSWORD FUNCTION
     function sendPasswordReset() {
         const email = document.getElementById('forgot-email').value.trim().toLowerCase();
         if (!email) return alert("කරුණාකර ඔබගේ Gmail ලිපිනය ඇතුළත් කරන්න.");
@@ -343,32 +377,129 @@
         loadFriends();
     }
 
+    // Friend Tab Switcher
+    function switchFriendTab(tab) {
+        document.getElementById('tab-flist').classList.remove('active');
+        document.getElementById('tab-freq').classList.remove('active');
+        document.getElementById('friend-list-area').classList.add('hidden');
+        document.getElementById('friend-req-area').classList.add('hidden');
+
+        if(tab === 'flist') {
+            document.getElementById('tab-flist').classList.add('active');
+            document.getElementById('friend-list-area').classList.remove('hidden');
+        } else {
+            document.getElementById('tab-freq').classList.add('active');
+            document.getElementById('friend-req-area').classList.remove('hidden');
+        }
+    }
+
+    // Modified Catalog View Loader
     function loadStories() {
         db.ref('stories').on('value', snap => {
             const feed = document.getElementById('feed'); feed.innerHTML = "";
+            fullStoriesObjects = {}; 
             snap.forEach(x => {
-                const s = x.val(); const key = x.key; rawStories[key] = s.text;
-                const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
-                const canEdit = (s.uPh === myId || myId === adminEncoded);
-                let textToShow = s.text; let seeMoreBtn = "";
-                if(textToShow.length > 150) { textToShow = textToShow.substring(0, 150) + "..."; seeMoreBtn = `<span class="see-more" onclick="showFullText('${key}')">See More</span>`; }
+                const s = x.val(); const key = x.key; 
+                rawStories[key] = s.text;
+                fullStoriesObjects[key] = s;
+
+                // Extracting Title (First line or first 25 chars)
+                let storyTitle = s.text.split('\n')[0];
+                if(storyTitle.length > 30) storyTitle = storyTitle.substring(0, 30) + "...";
+                
                 feed.insertAdjacentHTML('afterbegin', `
-                    <div class="card">
-                        <div style="display:flex; justify-content:space-between; align-items:center;"><b>${s.user}</b>${s.uPh !== myId ? `<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>` : ''}</div>
-                        <div id="story-text-${key}" style="margin:10px 0; white-space: pre-wrap; font-size:14px;">${formatText(textToShow)}${seeMoreBtn}</div>
-                        ${s.img ? `<img src="${s.img}" class="story-img">` : ''}
-                        ${canEdit ? `<div style="text-align:right; margin-top:10px;"><span onclick="editStory('${key}')" style="cursor:pointer; font-size:18px;">✏️</span><span onclick="delStory('${key}')" style="cursor:pointer; font-size:18px; margin-left:15px;">🗑️</span></div>` : ''}
+                    <div class="card catalog-item" onclick="viewFullStory('${key}')">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Author: <b>${s.user}</b></span>
+                        </div>
+                        <h3 style="margin:10px 0 5px 0; color:var(--viber); font-size:16px;">📖 ${storyTitle}</h3>
+                        ${s.img ? `<img src="${s.img}" class="story-img" style="max-height:150px;">` : ''}
+                        <div style="font-size:11px; color:#666; text-align:right; margin-top:5px;">Tap to read full story</div>
                     </div>
                 `);
             });
         });
     }
 
+    // Open Full Story Function
+    function viewFullStory(key) {
+        const s = fullStoriesObjects[key];
+        if(!s) return;
+        
+        const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
+        const canEdit = (s.uPh === myId || myId === adminEncoded);
+        
+        document.getElementById('detail-author').innerText = s.user + "'s Story";
+        const container = document.getElementById('detail-container');
+        
+        container.innerHTML = `
+            <div class="card" style="background:transparent; border:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>${s.user}</h2>
+                    ${s.uPh !== myId ? `<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>` : ''}
+                </div>
+                <hr style="border-color:#222; margin:15px 0;">
+                <div style="white-space: pre-wrap; font-size:16px; line-height:1.6; margin-bottom:20px;">${formatText(s.text)}</div>
+                ${s.img ? `<img src="${s.img}" style="width:100%; border-radius:10px; margin-bottom:20px;">` : ''}
+                
+                ${canEdit ? `
+                    <div style="text-align:right; margin-top:20px; border-top:1px solid #222; padding-top:15px;">
+                        <button onclick="triggerEditFromDetail('${key}')" style="width:auto; display:inline-block; background:#27ae60; margin-right:10px; padding:8px 20px;">✏️ Edit</button>
+                        <button onclick="triggerDeleteFromDetail('${key}')" style="width:auto; display:inline-block; background:#c0392b; padding:8px 20px;">🗑️ Delete</button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        document.getElementById('story-detail-window').classList.remove('hidden');
+    }
+
+    function triggerEditFromDetail(key) {
+        closeStoryDetail();
+        editStory(key);
+    }
+
+    function triggerDeleteFromDetail(key) {
+        if(confirm("Delete this story?")) {
+            db.ref('stories/'+key).remove();
+            closeStoryDetail();
+        }
+    }
+
+    function closeStoryDetail() {
+        document.getElementById('story-detail-window').classList.add('hidden');
+    }
+
     function showFullText(key) { document.getElementById('story-text-' + key).innerHTML = formatText(rawStories[key]); }
     function postStory() { const txt = document.getElementById('si').value.trim(); if(!txt) return alert("Write something!"); if(editKey) { db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); }); } else { db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => { closeModal(); }); } }
     function searchUsers() { const q = document.getElementById('search-user').value.toLowerCase(); const res = document.getElementById('search-results'); if(q.length < 2) { res.innerHTML = ""; return; } db.ref('users').once('value', snap => { res.innerHTML = ""; snap.forEach(u => { if(u.val().name.toLowerCase().includes(q) && u.key !== myId) { res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;"><span>${u.val().name}</span><button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button></div>`; } }); }); }
+    
     function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm}); alert("Friend request sent to " + toNm); }
-    function loadFriends() { db.ref('friends/'+myId).on('value', snap => { const c = document.getElementById('cons'); c.innerHTML = ""; snap.forEach(f => { const data = f.val(); if(data.status === 'accepted') { db.ref('users/'+f.key+'/pic').once('value', p => { const img = p.exists() ? p.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png"; c.insertAdjacentHTML('beforeend', ` <div class="card" onclick="openChat('${f.key}','${data.name}')" style="display:flex; align-items:center; gap:12px; cursor:pointer;"><img src="${img}" class="p-img"><div><b>${data.name}</b><div style="font-size:10px; color:#888;">Tap to chat</div></div></div> `); }); } else if(data.status === 'pending') { c.insertAdjacentHTML('afterbegin', ` <div class="card" style="border:1px solid #f1c40f;"><p style="margin:0 0 10px 0; font-size:13px;">Friend Request: <b>${data.name}</b></p><button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${data.name}')">Accept</button></div> `); } }); }); }
+    
+    // Split Friend Loading into Friends and Pending Requests
+    function loadFriends() { 
+        db.ref('friends/'+myId).on('value', snap => { 
+            const c = document.getElementById('cons'); c.innerHTML = ""; 
+            const reqsList = document.getElementById('reqs-list'); reqsList.innerHTML = "";
+            let hasRequests = false;
+
+            snap.forEach(f => { 
+                const data = f.val(); 
+                if(data.status === 'accepted') { 
+                    db.ref('users/'+f.key+'/pic').once('value', p => { 
+                        const img = p.exists() ? p.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png"; 
+                        c.insertAdjacentHTML('beforeend', ` <div class="card" onclick="openChat('${f.key}','${data.name}')" style="display:flex; align-items:center; gap:12px; cursor:pointer;"><img src="${img}" class="p-img"><div><b>${data.name}</b><div style="font-size:10px; color:#888;">Tap to chat</div></div></div> `); 
+                    }); 
+                } else if(data.status === 'pending') { 
+                    hasRequests = true;
+                    reqsList.insertAdjacentHTML('beforeend', ` <div class="card" style="border:1px solid #f1c40f; background:rgba(0,0,0,0.4);"><p style="margin:0 0 10px 0; font-size:13px;">Friend Request from: <b>${data.name}</b></p><button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${data.name}')">Accept Request</button></div> `); 
+                } 
+            }); 
+            if(!hasRequests) {
+                reqsList.innerHTML = `<p style="text-align:center; color:#666; font-size:13px; margin-top:20px;">No pending requests</p>`;
+            }
+        }); 
+    }
+
     function acc(targetId, nm) { db.ref('friends/'+myId+'/'+targetId).set({status:'accepted', name:nm}); db.ref('friends/'+targetId+'/'+myId).set({status:'accepted', name:myNm}); }
     function openChat(targetId, name) { activeChatPh = targetId; document.getElementById('chat-name').innerText = name; document.getElementById('chat-window').classList.remove('hidden'); const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId; db.ref('messages/'+cid).on('value', s => { const mc = document.getElementById('msg-container'); mc.innerHTML = ""; s.forEach(m => { const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;'; mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px; word-wrap: break-word;">${formatText(m.val().msg)}</div>`; }); mc.scrollTop = mc.scrollHeight; }); }
     function sendMsg() { const msg = document.getElementById('msg-input').value.trim(); if(!msg) return; const cid = myId < activeChatPh ? myId+"_"+activeChatPh : activeChatPh+"_"+myId; db.ref('messages/'+cid).push({ sender: myId, msg: msg, time: Date.now() }); document.getElementById('msg-input').value = ""; }

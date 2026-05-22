@@ -7,6 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
     <style>
         :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.75); }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #000 no-repeat center center fixed; background-size: cover; color: white; min-height: 100vh; transition: 0.5s; overflow-x: hidden; }
@@ -106,19 +107,16 @@
         <div id="notice-bar"></div>
 
         <div id="p-chats" class="page">
-            <!-- Friend Tabs system -->
             <div class="friend-tabs">
                 <div id="tab-flist" class="f-tab active" onclick="switchFriendTab('flist')">Friend List</div>
                 <div id="tab-freq" class="f-tab" onclick="switchFriendTab('freq')">Requests & Search</div>
             </div>
 
-            <!-- Friend List Area -->
             <div id="friend-list-area">
                 <h4 style="margin:15px;">My Friends</h4>
                 <div id="cons"></div>
             </div>
 
-            <!-- Friend Requests & Search Area -->
             <div id="friend-req-area" class="hidden">
                 <div style="padding: 10px;">
                     <input type="text" id="search-user" placeholder="Search new friends by name..." onkeyup="searchUsers()">
@@ -167,7 +165,6 @@
     </div>
 </div>
 
-<!-- Full Story Detail Window (Catalog View Support) -->
 <div id="story-detail-window" class="hidden">
     <header>
         <div style="display:flex; align-items:center; gap:10px;">
@@ -193,6 +190,7 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
+    const storage = firebase.storage(); // Cloud Storage සක්‍රීය කරන ලදී
 
     const ADMIN_EMAIL = "thilinak02@gmail.com"; 
     
@@ -200,9 +198,9 @@
     let myNm = localStorage.getItem("nm") || "";
     let activeChatPh = "";
     let editKey = null;
-    let storyImgData = "";
+    let storyImgFile = null; // Base64 දත්ත වෙනුවට Upload File එක තබා ගැනීමට
     let rawStories = {};
-    let fullStoriesObjects = {}; // To keep original data for catalog click
+    let fullStoriesObjects = {}; 
 
     window.onload = () => {
         syncApp();
@@ -218,6 +216,9 @@
                             myId = encodedEmail;
                             myNm = snap.val().name;
                             start();
+                        } else {
+                            // ඩේටාබේස් එක හිස් නම් ලොග්අවුට් කර ලොගින් පිටුවට දමයි
+                            logout();
                         }
                     });
                 } else {
@@ -227,7 +228,9 @@
                 }
             } else {
                 if(myId) {
-                    start();
+                    db.ref('users/' + myId).once('value', snap => {
+                        if(snap.exists()) { start(); } else { logout(); }
+                    });
                 } else {
                     showLoginView();
                 }
@@ -369,7 +372,8 @@
         const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
         if(myId === adminEncoded) document.getElementById('adm-area').classList.remove('hidden');
         
-        db.ref('users/'+myId+'/pic').on('value', snap => {
+        // .on වෙනුවට .once දමා ඇත්තේ දත්ත මුලදී නොමැතිවිට Freeze වීම වැළැක්වීමටයි
+        db.ref('users/'+myId+'/pic').once('value', snap => {
             if(snap.exists()) document.getElementById('my-p-img').src = snap.val();
         });
         
@@ -470,7 +474,33 @@
     }
 
     function showFullText(key) { document.getElementById('story-text-' + key).innerHTML = formatText(rawStories[key]); }
-    function postStory() { const txt = document.getElementById('si').value.trim(); if(!txt) return alert("Write something!"); if(editKey) { db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); }); } else { db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => { closeModal(); }); } }
+    
+    // Cloud Storage හරහා පෝස්ට් එකක් දමන නව ෆන්ක්ෂන් එක
+    function postStory() { 
+        const txt = document.getElementById('si').value.trim(); 
+        if(!txt) return alert("Write something!"); 
+        
+        const btn = document.getElementById('post-btn');
+        btn.innerText = "Uploading..."; btn.disabled = true;
+
+        if(editKey) { 
+            db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); btn.innerText="Post Now"; btn.disabled=false; }); 
+        } else { 
+            if(storyImgFile) {
+                const ref = storage.ref('story_images/' + Date.now() + "_" + myId);
+                ref.put(storyImgFile).then(snapshot => {
+                    snapshot.ref.getDownloadURL().then(downloadURL => {
+                        db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:downloadURL, time:Date.now() })
+                        .then(() => { closeModal(); btn.innerText="Post Now"; btn.disabled=false; });
+                    });
+                }).catch(err => { alert("Upload Failed: " + err.message); btn.innerText="Post Now"; btn.disabled=false; });
+            } else {
+                db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:"", time:Date.now() })
+                .then(() => { closeModal(); btn.innerText="Post Now"; btn.disabled=false; });
+            }
+        } 
+    }
+
     function searchUsers() { const q = document.getElementById('search-user').value.toLowerCase(); const res = document.getElementById('search-results'); if(q.length < 2) { res.innerHTML = ""; return; } db.ref('users').once('value', snap => { res.innerHTML = ""; snap.forEach(u => { if(u.val().name.toLowerCase().includes(q) && u.key !== myId) { res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;"><span>${u.val().name}</span><button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button></div>`; } }); }); }
     
     function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm}); alert("Friend request sent to " + toNm); }
@@ -504,7 +534,7 @@
     function openChat(targetId, name) { activeChatPh = targetId; document.getElementById('chat-name').innerText = name; document.getElementById('chat-window').classList.remove('hidden'); const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId; db.ref('messages/'+cid).on('value', s => { const mc = document.getElementById('msg-container'); mc.innerHTML = ""; s.forEach(m => { const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;'; mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px; word-wrap: break-word;">${formatText(m.val().msg)}</div>`; }); mc.scrollTop = mc.scrollHeight; }); }
     function sendMsg() { const msg = document.getElementById('msg-input').value.trim(); if(!msg) return; const cid = myId < activeChatPh ? myId+"_"+activeChatPh : activeChatPh+"_"+myId; db.ref('messages/'+cid).push({ sender: myId, msg: msg, time: Date.now() }); document.getElementById('msg-input').value = ""; }
     function pg(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
-    function openStoryModal() { editKey = null; storyImgData = ""; document.getElementById('si').value = ""; document.getElementById('m-title').innerText = "New Post"; document.getElementById('img-field').classList.remove('hidden'); document.getElementById('sm').classList.remove('hidden'); }
+    function openStoryModal() { editKey = null; storyImgFile = null; document.getElementById('si').value = ""; document.getElementById('m-title').innerText = "New Post"; document.getElementById('img-field').classList.remove('hidden'); document.getElementById('sm').classList.remove('hidden'); }
     function editStory(k) { editKey = k; document.getElementById('m-title').innerText = "Edit Post"; document.getElementById('si').value = rawStories[k]; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); }
     function closeModal() { document.getElementById('sm').classList.add('hidden'); }
     function closeChat() { document.getElementById('chat-window').classList.add('hidden'); activeChatPh = ""; }
@@ -512,9 +542,27 @@
     function logout() { auth.signOut(); localStorage.clear(); location.reload(); }
     function setNotice() { const m = prompt("Enter Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
 
-    document.getElementById('p-pic-up').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('users/'+myId+'/pic').set(ev.target.result); r.readAsDataURL(f); } });
+    // පැරණි Base64 ක්‍රමය වෙනුවට Profile Picture එක Storage හරහා වෙනස් කිරීම
+    document.getElementById('p-pic-up').addEventListener('change', function(e) { 
+        const f = e.target.files[0]; 
+        if(f){ 
+            const ref = storage.ref('profile_pics/' + myId);
+            ref.put(f).then(snapshot => {
+                snapshot.ref.getDownloadURL().then(downloadURL => {
+                    db.ref('users/'+myId+'/pic').set(downloadURL);
+                    document.getElementById('my-p-img').src = downloadURL;
+                });
+            });
+        } 
+    });
+
     document.getElementById('bg-upload').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); } });
-    document.getElementById('img-input').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>storyImgData=ev.target.result; r.readAsDataURL(f); } });
+    
+    // පෝස්ට් පින්තූරය තෝරාගන්නා විට එය ෆයිල් එකක් ලෙස තබා ගැනීම
+    document.getElementById('img-input').addEventListener('change', function(e) { 
+        const f = e.target.files[0]; 
+        if(f){ storyImgFile = f; } 
+    });
 </script>
 </body>
 </html>

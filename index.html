@@ -36,8 +36,74 @@
     </style>
 </head>
 <body>
+    <div class="content-wrap">
+        <div id="auth-page" class="hidden" style="padding:40px;">
+            <div class="card" id="login-section">
+                <h2 style="text-align:center;">STORY PRO</h2>
+                <input id="login-email" type="email" placeholder="Enter Gmail address">
+                <input id="login-pwd" type="password" placeholder="Enter Password">
+                <button onclick="loginWithEmailPwd()" style="background:var(--viber);">LOGIN</button>
+                <p onclick="showRegisterView()" class="auth-link">First time here? <b>Register</b></p>
+            </div>
+            <div class="card hidden" id="register-section">
+                <input id="reg-email" type="email" placeholder="Gmail">
+                <input id="reg-name" placeholder="Name">
+                <input id="reg-pwd" type="password" placeholder="Password">
+                <button onclick="registerWithVerification()" style="background:var(--viber);">REGISTER</button>
+            </div>
+            <div class="card hidden" id="forgot-pwd-section">
+                <input id="forgot-email" type="email" placeholder="Gmail">
+                <button onclick="sendPasswordReset()" style="background:#e67e22;">RESET PASSWORD</button>
+            </div>
+        </div>
+
+        <div id="main-app" class="hidden">
+            <header>
+                <b>Story Pro</b>
+                <button onclick="logout()" style="width:auto; padding:5px 10px; background:none; border:1px solid #fff;">Logout</button>
+            </header>
+            <div id="notice-bar"></div>
+            <div id="p-chats" class="page">
+                <div id="cons"></div>
+            </div>
+            <div id="p-stories" class="page hidden">
+                <div id="feed"></div>
+            </div>
+            <div class="nav-bar">
+                <div class="nav-item active" onclick="pg('p-chats',this)">💬 Chats</div>
+                <div class="nav-item" onclick="pg('p-stories',this)">📖 Stories</div>
+                <div class="nav-item" onclick="openStoryModal()">➕ Post</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sm" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; padding:20px; overflow-y: auto;">
+        <textarea id="si" placeholder="What's on your mind?" rows="6"></textarea>
+        <button id="post-btn" onclick="postStory()" style="background:var(--viber);">Post</button>
+        <button onclick="closeModal()">Cancel</button>
+    </div>
+
+    <div id="chat-window" class="hidden">
+        <header><span onclick="closeChat()">⬅</span><b id="chat-name">Chat</b></header>
+        <div id="msg-container" style="flex:1; overflow-y:auto; padding:15px;"></div>
+        <div style="padding:10px; display:flex;">
+            <input id="msg-input" placeholder="Type message...">
+            <button onclick="sendMsg()" style="width:auto;">Send</button>
+        </div>
+    </div>
+
+    <div id="story-detail-window" class="hidden">
+        <header><span onclick="closeStoryDetail()">⬅</span><b id="detail-author">Story Detail</b></header>
+        <div id="detail-container" style="flex:1; overflow-y:auto; padding:15px;"></div>
+    </div>
+
     <script>
-        // ... (ඔබේ Firebase Config සහ අනෙකුත් functions ඒ ආකාරයෙන්ම ඇත) ...
+        const firebaseConfig = { apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0", authDomain: "story-ceca0.firebaseapp.com", projectId: "story-ceca0", storageBucket: "story-ceca0.firebasestorage.app", messagingSenderId: "820075788039", appId: "1:820075788039:web:421fd811a4b4a3249a77a2", databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com" };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth(); const db = firebase.database();
+        let myId = localStorage.getItem("myId") || ""; let myNm = localStorage.getItem("nm") || ""; let fullStoriesObjects = {};
+
+        function formatText(t) { return t ? t.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') : ""; }
 
         function viewFullStory(key) {
             const s = fullStoriesObjects[key];
@@ -52,17 +118,15 @@
                     <h2>${s.user}</h2>
                     <div style="white-space: pre-wrap; font-size:16px;">${formatText(s.text)}</div>
                     ${s.img ? `<img src="${s.img}" style="width:100%; border-radius:10px;">` : ''}
-                    
                     <div style="margin-top:20px;">
                         <button onclick="toggleLike('${key}')" style="background:${hasLiked ? '#e74c3c' : '#333'}; width:auto;">
                             ${hasLiked ? '❤️ Liked' : '🤍 Like'}
                         </button>
                     </div>
-
                     <div style="margin-top:20px;">
                         <h4>Comments</h4>
                         <div id="comment-list" style="margin-bottom:10px;"></div>
-                        <input id="comm-input" placeholder="Write a comment...">
+                        <input id="comm-input" placeholder="Write a comment..." style="color:black;">
                         <button onclick="postComment('${key}')" style="background:var(--viber);">Post</button>
                     </div>
                 </div>
@@ -98,7 +162,9 @@
                 });
             });
         }
-        // ... (ඔබේ ඉතිරි සියලුම functions ඒ ආකාරයෙන්ම ඇත) ...
+        
+        function closeStoryDetail() { document.getElementById('story-detail-window').classList.add('hidden'); }
+        // ... (ඔබේ අනෙකුත් සියලුම මුල් functions මෙතැනින් පහළට ඇතුළත් කරන්න) ...
     </script>
 </body>
 </html>

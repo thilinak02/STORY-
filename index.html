@@ -1,6 +1,43 @@
 <!DOCTYPE html>
 <html lang="si">
 <head>
+<style>
+    #offline-message {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+        text-align: center;
+        padding-top: 20%;
+        font-family: sans-serif;
+        z-index: 9999;
+    }
+</style>
+
+<div id="offline-message">
+    <h2 style="color: #555;">අපොයි!</h2>
+    <p style="color: #777;">අන්තර්ජාල සම්බන්ධතාවය බිඳී ඇත.</p>
+    <button onclick="location.reload()" style="padding: 10px 20px; cursor: pointer;">නැවත උත්සාහ කරන්න</button>
+</div>
+
+<script>
+    window.addEventListener('offline', function() {
+        document.getElementById('offline-message').style.display = 'block';
+    });
+    window.addEventListener('online', function() {
+        document.getElementById('offline-message').style.display = 'none';
+    });
+    
+    // මුලින්ම ලෝඩ් වෙද්දී ඉන්ටර්නෙට් නැත්නම් පෙන්වන්න
+    if (!navigator.onLine) {
+        document.getElementById('offline-message').style.display = 'block';
+    }
+</script>
+
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STORY PRO - Master Edition</title>

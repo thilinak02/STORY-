@@ -36,69 +36,119 @@
     </style>
 </head>
 <body>
-    <script>
-        // ... (ඔබේ Firebase Config සහ අනෙකුත් functions ඒ ආකාරයෙන්ම ඇත) ...
 
-        function viewFullStory(key) {
-            const s = fullStoriesObjects[key];
-            if(!s) return;
-            const hasLiked = s.likes && s.likes[myId];
-            
-            document.getElementById('detail-author').innerText = s.user + "'s Story";
-            const container = document.getElementById('detail-container');
-            
-            container.innerHTML = `
-                <div class="card" style="background:transparent; border:none;">
-                    <h2>${s.user}</h2>
-                    <div style="white-space: pre-wrap; font-size:16px;">${formatText(s.text)}</div>
-                    ${s.img ? `<img src="${s.img}" style="width:100%; border-radius:10px;">` : ''}
-                    
-                    <div style="margin-top:20px;">
-                        <button onclick="toggleLike('${key}')" style="background:${hasLiked ? '#e74c3c' : '#333'}; width:auto;">
-                            ${hasLiked ? '❤️ Liked' : '🤍 Like'}
-                        </button>
-                    </div>
+<div class="content-wrap">
+    <div id="auth-page" class="hidden" style="padding:40px;">
+        <div class="card" id="login-section">
+            <h2 style="text-align:center;">STORY PRO</h2>
+            <input id="login-email" type="email" placeholder="Enter Gmail address">
+            <input id="login-pwd" type="password" placeholder="Enter Password">
+            <button onclick="loginWithEmailPwd()" style="background:var(--viber); border:none; margin-top:15px;">LOGIN</button>
+            <p onclick="showRegisterView()" class="auth-link">First time here? <b>Register Account</b></p>
+        </div>
+        <div class="card hidden" id="register-section">...</div>
+        <div class="card hidden" id="forgot-pwd-section">...</div>
+    </div>
 
-                    <div style="margin-top:20px;">
-                        <h4>Comments</h4>
-                        <div id="comment-list" style="margin-bottom:10px;"></div>
-                        <input id="comm-input" placeholder="Write a comment...">
-                        <button onclick="postComment('${key}')" style="background:var(--viber);">Post</button>
-                    </div>
+    <div id="main-app" class="hidden">
+        <header>
+            <b id="myn">Story Pro</b>
+            <button onclick="logout()" style="width:auto; padding:5px 10px;">Logout</button>
+        </header>
+        <div id="p-chats" class="page">...</div>
+        <div id="p-stories" class="page hidden">
+            <div id="feed"></div>
+        </div>
+        <div class="nav-bar">
+            <div class="nav-item active" onclick="pg('p-chats',this)">💬 Chats</div>
+            <div class="nav-item" onclick="pg('p-stories',this)">📖 Stories</div>
+            <div class="nav-item" onclick="openStoryModal()">➕ Post</div>
+        </div>
+    </div>
+</div>
+
+<div id="story-detail-window" class="hidden">
+    <header>
+        <span onclick="closeStoryDetail()" style="font-size:24px; cursor:pointer;">⬅</span> 
+        <b id="detail-author">Story Detail</b>
+    </header>
+    <div id="detail-container" style="flex:1; overflow-y:auto; padding:15px;"></div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
+        authDomain: "story-ceca0.firebaseapp.com",
+        projectId: "story-ceca0",
+        storageBucket: "story-ceca0.firebasestorage.app",
+        messagingSenderId: "820075788039",
+        appId: "1:820075788039:web:421fd811a4b4a3249a77a2",
+        databaseURL: "https://story-ceca0-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+    let myId = localStorage.getItem("myId") || ""; 
+    let myNm = localStorage.getItem("nm") || "";
+    let fullStoriesObjects = {};
+
+    function viewFullStory(key) {
+        const s = fullStoriesObjects[key];
+        if(!s) return;
+        const likesCount = s.likes ? Object.keys(s.likes).length : 0;
+        const hasLiked = s.likes && s.likes[myId];
+        
+        document.getElementById('detail-author').innerText = s.user + "'s Story";
+        const container = document.getElementById('detail-container');
+        
+        container.innerHTML = `
+            <div class="card" style="background:transparent; border:none;">
+                <h2>${s.user}</h2>
+                <div style="white-space: pre-wrap; font-size:16px;">${formatText(s.text)}</div>
+                ${s.img ? `<img src="${s.img}" style="width:100%; border-radius:10px;">` : ''}
+                <div style="margin:20px 0;">
+                    <button onclick="toggleLike('${key}')" style="background:${hasLiked ? '#e74c3c' : '#333'}; width:auto;">
+                        ${hasLiked ? '❤️ Liked' : '🤍 Like'}
+                    </button> <span>${likesCount} Likes</span>
                 </div>
-            `;
-            loadComments(key);
-            document.getElementById('story-detail-window').classList.remove('hidden');
-        }
+                <div>
+                    <h4>Comments</h4>
+                    <div id="comment-list" style="margin-bottom:10px; max-height:200px; overflow-y:auto; background:#222; padding:10px; border-radius:10px;"></div>
+                    <input id="comm-input" placeholder="Write a comment...">
+                    <button onclick="postComment('${key}')" style="background:var(--viber);">Post</button>
+                </div>
+            </div>
+        `;
+        loadComments(key);
+        document.getElementById('story-detail-window').classList.remove('hidden');
+    }
 
-        function toggleLike(key) {
-            const likeRef = db.ref('stories/' + key + '/likes/' + myId);
-            likeRef.once('value', snap => {
-                if (snap.exists()) { likeRef.remove(); } else { likeRef.set(true); }
-                viewFullStory(key);
-            });
-        }
+    function toggleLike(key) {
+        if(!myId) return alert("Login first!");
+        const ref = db.ref('stories/' + key + '/likes/' + myId);
+        ref.once('value', snap => { snap.exists() ? ref.remove() : ref.set(true); viewFullStory(key); });
+    }
 
-        function postComment(key) {
-            const msg = document.getElementById('comm-input').value.trim();
-            if (!msg) return;
-            db.ref('stories/' + key + '/comments').push({ user: myNm, text: msg, time: Date.now() }).then(() => {
-                document.getElementById('comm-input').value = "";
-            });
-        }
+    function postComment(key) {
+        const msg = document.getElementById('comm-input').value.trim();
+        if(!msg) return;
+        db.ref('stories/' + key + '/comments').push({ user: myNm, text: msg, time: Date.now() }).then(() => {
+            document.getElementById('comm-input').value = "";
+        });
+    }
 
-        function loadComments(key) {
-            db.ref('stories/' + key + '/comments').on('value', snap => {
-                const list = document.getElementById('comment-list');
-                list.innerHTML = "";
-                snap.forEach(c => {
-                    list.innerHTML += `<div style="font-size:12px; background:#222; padding:5px; border-radius:5px; margin-bottom:5px;">
-                        <b>${c.val().user}:</b> ${c.val().text}
-                    </div>`;
-                });
+    function loadComments(key) {
+        db.ref('stories/' + key + '/comments').on('value', snap => {
+            const list = document.getElementById('comment-list');
+            list.innerHTML = "";
+            snap.forEach(c => {
+                const d = c.val();
+                list.innerHTML += `<div style="font-size:12px; margin-bottom:5px;"><b>${d.user}:</b> ${d.text}</div>`;
             });
-        }
-        // ... (ඔබේ ඉතිරි සියලුම functions ඒ ආකාරයෙන්ම ඇත) ...
-    </script>
+        });
+    }
+    
+    // ඔබගේ ඉතිරි සියලුම functions (auth, loadStories, ආදිය) මෙතැනට ඇතුළත් කරන්න...
+</script>
 </body>
 </html>

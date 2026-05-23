@@ -35,41 +35,42 @@
         .auth-link { text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:15px; }
         .auth-link b { color: var(--viber); }
 
-        /* New Styles for Friend Tabs & Catalog */
         .friend-tabs { display: flex; gap: 10px; margin: 10px; }
         .f-tab { flex: 1; padding: 10px; text-align: center; background: #222; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: bold; border: 1px solid #333; }
         .f-tab.active { background: var(--viber); border-color: var(--viber); color: white; }
         .catalog-item { cursor: pointer; transition: 0.2s; }
         .catalog-item:hover { transform: translateY(-2px); }
+
+        /* Like & Comment Styles */
+        .action-bar { display: flex; gap: 15px; margin-top: 10px; border-top: 1px solid #222; padding-top: 10px; }
+        .act-btn { background: none; border: none; color: #aaa; width: auto; padding: 5px 10px; font-size: 13px; display: flex; align-items: center; gap: 5px; }
+        .act-btn.liked { color: #e74c3c; font-weight: bold; }
+        .comment-section { margin-top: 15px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 10px; }
+        .comment-box { max-height: 150px; overflow-y: auto; margin-bottom: 10px; font-size: 13px; }
+        .single-comment { background: #111; padding: 8px; border-radius: 8px; margin-bottom: 5px; position: relative; }
+        .comment-del-btn { position: absolute; right: 5px; top: 5px; background: none; border: none; color: #c0392b; font-size: 11px; width: auto; padding: 2px; }
     </style>
 </head>
 <body>
 
 <div class="content-wrap">
     <div id="auth-page" class="hidden" style="padding:40px;">
-        
         <div class="card" id="login-section">
             <h2 style="text-align:center;">STORY PRO</h2>
             <p style="text-align:center; font-size:13px; color:#aaa; margin-bottom:20px;">Login with your Gmail & Password</p>
-            
             <input id="login-email" type="email" placeholder="Enter Gmail address">
             <input id="login-pwd" type="password" placeholder="Enter Password">
-            
             <button onclick="loginWithEmailPwd()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">LOGIN</button>
-            
             <p onclick="showForgotPwdView()" style="text-align:center; font-size:12px; cursor:pointer; color:#e74c3c; margin-top:15px; font-weight:bold;">Forgot Password?</p>
-            
             <p onclick="showRegisterView()" class="auth-link">First time here? <b>Register Account</b></p>
         </div>
 
         <div class="card hidden" id="register-section">
             <h3 style="text-align:center; margin-top:0;">Create Account</h3>
             <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Enter details. We will double-check your Gmail dynamically.</p>
-            
             <input id="reg-email" type="email" placeholder="Enter your real Gmail address">
             <input id="reg-name" placeholder="Choose a Username / Display Name">
             <input id="reg-pwd" type="password" placeholder="Create a Password (Min 6 chars)">
-            
             <button onclick="registerWithVerification()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">REGISTER ACCOUNT</button>
             <p onclick="showLoginView()" class="auth-link">Already have an account? <b>Login</b></p>
         </div>
@@ -77,9 +78,7 @@
         <div class="card hidden" id="forgot-pwd-section">
             <h3 style="text-align:center; margin-top:0;">Reset Password</h3>
             <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Enter your Gmail address below. We will send you a secure link to reset your password.</p>
-            
             <input id="forgot-email" type="email" placeholder="Enter your Gmail address">
-            
             <button onclick="sendPasswordReset()" style="background:#e67e22; border:none; font-weight:bold; margin-top:15px;">SEND RESET LINK</button>
             <p onclick="showLoginView()" class="auth-link">Back to <b>Login</b></p>
         </div>
@@ -106,19 +105,14 @@
         <div id="notice-bar"></div>
 
         <div id="p-chats" class="page">
-            <!-- Friend Tabs system -->
             <div class="friend-tabs">
                 <div id="tab-flist" class="f-tab active" onclick="switchFriendTab('flist')">Friend List</div>
                 <div id="tab-freq" class="f-tab" onclick="switchFriendTab('freq')">Requests & Search</div>
             </div>
-
-            <!-- Friend List Area -->
             <div id="friend-list-area">
                 <h4 style="margin:15px;">My Friends</h4>
                 <div id="cons"></div>
             </div>
-
-            <!-- Friend Requests & Search Area -->
             <div id="friend-req-area" class="hidden">
                 <div style="padding: 10px;">
                     <input type="text" id="search-user" placeholder="Search new friends by name..." onkeyup="searchUsers()">
@@ -167,7 +161,6 @@
     </div>
 </div>
 
-<!-- Full Story Detail Window (Catalog View Support) -->
 <div id="story-detail-window" class="hidden">
     <header>
         <div style="display:flex; align-items:center; gap:10px;">
@@ -179,7 +172,6 @@
 </div>
 
 <script>
-    // Firebase Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyDJ-9NkKH2GCkkLTr6Xr1Y7rz_bj3qJdF0",
         authDomain: "story-ceca0.firebaseapp.com",
@@ -202,11 +194,10 @@
     let editKey = null;
     let storyImgData = "";
     let rawStories = {};
-    let fullStoriesObjects = {}; // To keep original data for catalog click
+    let fullStoriesObjects = {};
 
     window.onload = () => {
         syncApp();
-        
         auth.onAuthStateChanged((user) => {
             if (user) {
                 if (user.emailVerified || user.email === ADMIN_EMAIL) {
@@ -226,11 +217,7 @@
                     showLoginView();
                 }
             } else {
-                if(myId) {
-                    start();
-                } else {
-                    showLoginView();
-                }
+                if(myId) { start(); } else { showLoginView(); }
             }
         });
     };
@@ -251,13 +238,10 @@
         });
     }
 
-    // LOGIN SYSTEM
     function loginWithEmailPwd() {
         const email = document.getElementById('login-email').value.trim().toLowerCase();
         const pwd = document.getElementById('login-pwd').value.trim();
-
         if (!email || !pwd) return alert("කරුණාකර Gmail ලිපිනය සහ Password ඇතුළත් කරන්න.");
-
         auth.signInWithEmailAndPassword(email, pwd)
             .then((userCredential) => {
                 const user = userCredential.user;
@@ -265,9 +249,7 @@
                     const encodedEmail = btoa(email).replace(/=/g, "");
                     db.ref('users/' + encodedEmail).once('value', snap => {
                         let currentName = "User";
-                        if (snap.exists()) {
-                            currentName = snap.val().name;
-                        }
+                        if (snap.exists()) currentName = snap.val().name;
                         localStorage.setItem("myId", encodedEmail);
                         localStorage.setItem("nm", currentName);
                         myId = encodedEmail;
@@ -275,125 +257,68 @@
                         start();
                     });
                 } else {
-                    alert("ඔබේ ගිණුම තවමත් තහවුරු කර නැත! කරුණාකර ඔබගේ Gmail inbox එක පරික්ෂා කර එහි ඇති ලින්ක් එක ක්ලික් කරන්න.");
+                    alert("ඔබේ ගිණුම තවමත් තහවුරු කර නැත! කරුණාකර Gmail inbox බලන්න.");
                     auth.signOut();
                 }
-            })
-            .catch((error) => {
-                alert("Login Failed: " + error.message);
-            });
+            }).catch((error) => { alert("Login Failed: " + error.message); });
     }
 
-    // REGISTER SYSTEM
     function registerWithVerification() {
         const email = document.getElementById('reg-email').value.trim().toLowerCase();
         const name = document.getElementById('reg-name').value.trim();
         const pwd = document.getElementById('reg-pwd').value.trim();
-
         if (!email || !name || !pwd) return alert("කරුණාකර සියලුම විස්තර ඇතුළත් කරන්න.");
-        if (pwd.length < 6) return alert("Password එක සඳහා අවම වශයෙන් අකුරු/ඉලක්කම් 6ක්වත් දෙන්න.");
-
+        if (pwd.length < 6) return alert("Password එක සඳහා අවම වශයෙන් අකුරු 6ක්වත් දෙන්න.");
         const encodedEmail = btoa(email).replace(/=/g, "");
-
         db.ref('users/' + encodedEmail).once('value', snap => {
             if (snap.exists()) {
-                alert("මේ Gmail ලිපිනයෙන් දැනටමත් ගිණුමක් සාදා ඇත. කරුණාකර Login වෙන්න.");
+                alert("මේ Gmail ලිපිනයෙන් දැනටමත් ගිණුමක් සාදා ඇත.");
                 showLoginView();
             } else {
                 auth.createUserWithEmailAndPassword(email, pwd)
                     .then((userCredential) => {
-                        userCredential.user.sendEmailVerification()
-                            .then(() => {
-                                const isAdmin = (email === ADMIN_EMAIL);
-                                const finalName = isAdmin ? "Admin" : name;
-
-                                db.ref('users/' + encodedEmail).set({
-                                    name: finalName,
-                                    email: email
-                                }).then(() => {
-                                    alert("ලියාපදිංචිය සාර්ථකයි! ඔබගේ " + email + " ලිපිනයට Verification ලින්ක් එකක් එවා ඇත. කරුණාකර ඔබගේ Gmail ඇප් එක විවෘත කර එම ලින්ක් එක ක්ලික් කර ගිණුම සක්‍රීය කරගන්න.");
-                                    auth.signOut();
-                                    showLoginView();
-                                });
+                        userCredential.user.sendEmailVerification().then(() => {
+                            const isAdmin = (email === ADMIN_EMAIL);
+                            const finalName = isAdmin ? "Admin" : name;
+                            db.ref('users/' + encodedEmail).set({ name: finalName, email: email }).then(() => {
+                                alert("ලියාපදිංචිය සාර්ථකයි! Verification ලින්ක් එක ක්ලික් කර ගිණුම සක්‍රීය කරගන්න.");
+                                auth.signOut();
+                                showLoginView();
                             });
-                    })
-                    .catch((error) => {
-                        alert("Registration Failed: " + error.message);
-                    });
+                        });
+                    }).catch((error) => { alert("Registration Failed: " + error.message); });
             }
         });
     }
 
-    // FORGOT PASSWORD FUNCTION
     function sendPasswordReset() {
         const email = document.getElementById('forgot-email').value.trim().toLowerCase();
-        if (!email) return alert("කරුණාකර ඔබගේ Gmail ලිපිනය ඇතුළත් කරන්න.");
-
-        auth.sendPasswordResetEmail(email)
-            .then(() => {
-                alert("Password එක වෙනස් කිරීමට අවශ්‍ය ආරක්ෂිත ලින්ක් එක සාර්ථකව ඔබගේ " + email + " ලිපිනයට එවන ලදී. කරුණාකර Inbox/Spam ෆෝල්ඩර පරික්ෂා කරන්න.");
-                showLoginView();
-            })
-            .catch((error) => {
-                alert("Error: " + error.message);
-            });
+        if (!email) return alert("කරුණාකර Gmail ලිපිනය ඇතුළත් කරන්න.");
+        auth.sendPasswordResetEmail(email).then(() => { alert("Reset ලින්ක් එක Gmail එකට එවන ලදී."); showLoginView(); }).catch((error) => { alert("Error: " + error.message); });
     }
 
-    // VIEW CHANGERS
-    function showRegisterView() {
-        document.getElementById('login-section').classList.add('hidden');
-        document.getElementById('forgot-pwd-section').classList.add('hidden');
-        document.getElementById('register-section').classList.remove('hidden');
-        document.getElementById('auth-page').classList.remove('hidden');
-    }
-
-    function showLoginView() {
-        document.getElementById('register-section').classList.add('hidden');
-        document.getElementById('forgot-pwd-section').classList.add('hidden');
-        document.getElementById('login-section').classList.remove('hidden');
-        document.getElementById('auth-page').classList.remove('hidden');
-    }
-
-    function showForgotPwdView() {
-        document.getElementById('login-section').classList.add('hidden');
-        document.getElementById('register-section').classList.add('hidden');
-        document.getElementById('forgot-pwd-section').classList.remove('hidden');
-        document.getElementById('auth-page').classList.remove('hidden');
-    }
+    function showRegisterView() { document.getElementById('login-section').classList.add('hidden'); document.getElementById('forgot-pwd-section').classList.add('hidden'); document.getElementById('register-section').classList.remove('hidden'); document.getElementById('auth-page').classList.remove('hidden'); }
+    function showLoginView() { document.getElementById('register-section').classList.add('hidden'); document.getElementById('forgot-pwd-section').classList.add('hidden'); document.getElementById('login-section').classList.remove('hidden'); document.getElementById('auth-page').classList.remove('hidden'); }
+    function showForgotPwdView() { document.getElementById('login-section').classList.add('hidden'); document.getElementById('register-section').classList.add('hidden'); document.getElementById('forgot-pwd-section').classList.remove('hidden'); document.getElementById('auth-page').classList.remove('hidden'); }
 
     function start() {
         document.getElementById('auth-page').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
         document.getElementById('myn').innerText = "Hi, " + myNm;
-        
         const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
         if(myId === adminEncoded) document.getElementById('adm-area').classList.remove('hidden');
-        
-        db.ref('users/'+myId+'/pic').on('value', snap => {
-            if(snap.exists()) document.getElementById('my-p-img').src = snap.val();
-        });
-        
+        db.ref('users/'+myId+'/pic').on('value', snap => { if(snap.exists()) document.getElementById('my-p-img').src = snap.val(); });
         loadStories();
         loadFriends();
     }
 
-    // Friend Tab Switcher
     function switchFriendTab(tab) {
-        document.getElementById('tab-flist').classList.remove('active');
-        document.getElementById('tab-freq').classList.remove('active');
-        document.getElementById('friend-list-area').classList.add('hidden');
-        document.getElementById('friend-req-area').classList.add('hidden');
-
-        if(tab === 'flist') {
-            document.getElementById('tab-flist').classList.add('active');
-            document.getElementById('friend-list-area').classList.remove('hidden');
-        } else {
-            document.getElementById('tab-freq').classList.add('active');
-            document.getElementById('friend-req-area').classList.remove('hidden');
-        }
+        document.getElementById('tab-flist').classList.remove('active'); document.getElementById('tab-freq').classList.remove('active');
+        document.getElementById('friend-list-area').classList.add('hidden'); document.getElementById('friend-req-area').classList.add('hidden');
+        if(tab === 'flist') { document.getElementById('tab-flist').classList.add('active'); document.getElementById('friend-list-area').classList.remove('hidden'); }
+        else { document.getElementById('tab-freq').classList.add('active'); document.getElementById('friend-req-area').classList.remove('hidden'); }
     }
 
-    // Modified Catalog View Loader
     function loadStories() {
         db.ref('stories').on('value', snap => {
             const feed = document.getElementById('feed'); feed.innerHTML = "";
@@ -403,10 +328,12 @@
                 rawStories[key] = s.text;
                 fullStoriesObjects[key] = s;
 
-                // Extracting Title (First line or first 25 chars)
                 let storyTitle = s.text.split('\n')[0];
                 if(storyTitle.length > 30) storyTitle = storyTitle.substring(0, 30) + "...";
                 
+                let likeCount = s.likes ? Object.keys(s.likes).length : 0;
+                let commentCount = s.comments ? Object.keys(s.comments).length : 0;
+
                 feed.insertAdjacentHTML('afterbegin', `
                     <div class="card catalog-item" onclick="viewFullStory('${key}')">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -414,26 +341,51 @@
                         </div>
                         <h3 style="margin:10px 0 5px 0; color:var(--viber); font-size:16px;">📖 ${storyTitle}</h3>
                         ${s.img ? `<img src="${s.img}" class="story-img" style="max-height:150px;">` : ''}
-                        <div style="font-size:11px; color:#666; text-align:right; margin-top:5px;">Tap to read full story</div>
+                        <div style="display:flex; gap:15px; font-size:12px; margin-top:8px; color:#aaa;">
+                            <span>❤️ ${likeCount} Likes</span>
+                            <span>💬 ${commentCount} Comments</span>
+                        </div>
                     </div>
                 `);
             });
+            // If detail window is open, refresh it dynamically
+            if(!document.getElementById('story-detail-window').classList.contains('hidden') && activeChatPh) {
+                viewFullStory(activeChatPh);
+            }
         });
     }
 
-    // Open Full Story Function
     function viewFullStory(key) {
+        activeChatPh = key; // Using this to track current viewing story key
         const s = fullStoriesObjects[key];
         if(!s) return;
         
         const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
         const canEdit = (s.uPh === myId || myId === adminEncoded);
+        const isLiked = (s.likes && s.likes[myId]) ? "liked" : "";
+        const likeCount = s.likes ? Object.keys(s.likes).length : 0;
         
         document.getElementById('detail-author').innerText = s.user + "'s Story";
         const container = document.getElementById('detail-container');
         
+        let commentsHTML = "";
+        if(s.comments) {
+            Object.keys(s.comments).forEach(cKey => {
+                const c = s.comments[cKey];
+                const showDel = (c.userId === myId || myId === adminEncoded) ? `<button class="comment-del-btn" onclick="deleteComment('${key}','${cKey}')">🗑️</button>` : "";
+                commentsHTML += `
+                    <div class="single-comment">
+                        <b style="color:var(--viber); font-size:12px;">${c.userName}</b>
+                        <p style="margin:3px 0 0 0; white-space:pre-wrap;">${formatText(c.text)}</p>
+                        ${showDel}
+                    </div>`;
+            });
+        } else {
+            commentsHTML = `<p style="color:#666; font-size:12px; text-align:center;">No comments yet.</p>`;
+        }
+        
         container.innerHTML = `
-            <div class="card" style="background:transparent; border:none;">
+            <div class="card" style="background:transparent; border:none; padding:0;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h2>${s.user}</h2>
                     ${s.uPh !== myId ? `<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>` : ''}
@@ -441,6 +393,19 @@
                 <hr style="border-color:#222; margin:15px 0;">
                 <div style="white-space: pre-wrap; font-size:16px; line-height:1.6; margin-bottom:20px;">${formatText(s.text)}</div>
                 ${s.img ? `<img src="${s.img}" style="width:100%; border-radius:10px; margin-bottom:20px;">` : ''}
+                
+                <div class="action-bar">
+                    <button class="act-btn ${isLiked}" onclick="toggleLike('${key}')">❤️ <span>${likeCount} Likes</span></button>
+                    <div class="act-btn">💬 Comments</div>
+                </div>
+
+                <div class="comment-section">
+                    <div class="comment-box">${commentsHTML}</div>
+                    <div style="display:flex; gap:5px;">
+                        <input id="c-input-${key}" placeholder="Write a comment..." style="padding:8px; font-size:13px; margin:0;">
+                        <button onclick="addComment('${key}')" style="width:auto; padding:8px 15px; background:var(--viber); border:none; margin:0; font-size:13px;">Send</button>
+                    </div>
+                </div>
                 
                 ${canEdit ? `
                     <div style="text-align:right; margin-top:20px; border-top:1px solid #222; padding-top:15px;">
@@ -453,35 +418,49 @@
         document.getElementById('story-detail-window').classList.remove('hidden');
     }
 
-    function triggerEditFromDetail(key) {
-        closeStoryDetail();
-        editStory(key);
+    // LIKE TOGGLE FUNCTION
+    function toggleLike(storyKey) {
+        const likeRef = db.ref(`stories/${storyKey}/likes/${myId}`);
+        likeRef.once('value', snap => {
+            if(snap.exists()) { likeRef.remove(); } else { likeRef.set(true); }
+        });
     }
 
-    function triggerDeleteFromDetail(key) {
-        if(confirm("Delete this story?")) {
-            db.ref('stories/'+key).remove();
-            closeStoryDetail();
+    // ADD COMMENT FUNCTION (With script filtering)
+    function addComment(storyKey) {
+        const input = document.getElementById(`c-input-${storyKey}`);
+        const txt = input.value.trim();
+        if(!txt) return;
+        if(txt.includes("<script>") || txt.includes("javascript:")) { return alert("Coding ඇතුළත් කළ නොහැක!"); }
+
+        db.ref(`stories/${storyKey}/comments`).push({
+            userId: myId,
+            userName: myNm,
+            text: txt,
+            time: Date.now()
+        }).then(() => { input.value = ""; });
+    }
+
+    // DELETE COMMENT FUNCTION
+    function deleteComment(storyKey, commentKey) {
+        if(confirm("මෙම Comment එක මකන්නද?")) {
+            db.ref(`stories/${storyKey}/comments/${commentKey}`).remove();
         }
     }
 
-    function closeStoryDetail() {
-        document.getElementById('story-detail-window').classList.add('hidden');
-    }
+    function triggerEditFromDetail(key) { closeStoryDetail(); editStory(key); }
+    function triggerDeleteFromDetail(key) { if(confirm("Delete this story?")) { db.ref('stories/'+key).remove(); closeStoryDetail(); } }
+    function closeStoryDetail() { document.getElementById('story-detail-window').classList.add('hidden'); activeChatPh = ""; }
 
-    function showFullText(key) { document.getElementById('story-text-' + key).innerHTML = formatText(rawStories[key]); }
     function postStory() { const txt = document.getElementById('si').value.trim(); if(!txt) return alert("Write something!"); if(editKey) { db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); }); } else { db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => { closeModal(); }); } }
     function searchUsers() { const q = document.getElementById('search-user').value.toLowerCase(); const res = document.getElementById('search-results'); if(q.length < 2) { res.innerHTML = ""; return; } db.ref('users').once('value', snap => { res.innerHTML = ""; snap.forEach(u => { if(u.val().name.toLowerCase().includes(q) && u.key !== myId) { res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;"><span>${u.val().name}</span><button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button></div>`; } }); }); }
-    
     function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm}); alert("Friend request sent to " + toNm); }
     
-    // Split Friend Loading into Friends and Pending Requests
     function loadFriends() { 
         db.ref('friends/'+myId).on('value', snap => { 
             const c = document.getElementById('cons'); c.innerHTML = ""; 
             const reqsList = document.getElementById('reqs-list'); reqsList.innerHTML = "";
             let hasRequests = false;
-
             snap.forEach(f => { 
                 const data = f.val(); 
                 if(data.status === 'accepted') { 
@@ -494,9 +473,7 @@
                     reqsList.insertAdjacentHTML('beforeend', ` <div class="card" style="border:1px solid #f1c40f; background:rgba(0,0,0,0.4);"><p style="margin:0 0 10px 0; font-size:13px;">Friend Request from: <b>${data.name}</b></p><button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${data.name}')">Accept Request</button></div> `); 
                 } 
             }); 
-            if(!hasRequests) {
-                reqsList.innerHTML = `<p style="text-align:center; color:#666; font-size:13px; margin-top:20px;">No pending requests</p>`;
-            }
+            if(!hasRequests) reqsList.innerHTML = `<p style="text-align:center; color:#666; font-size:13px; margin-top:20px;">No pending requests</p>`;
         }); 
     }
 
@@ -508,7 +485,6 @@
     function editStory(k) { editKey = k; document.getElementById('m-title').innerText = "Edit Post"; document.getElementById('si').value = rawStories[k]; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); }
     function closeModal() { document.getElementById('sm').classList.add('hidden'); }
     function closeChat() { document.getElementById('chat-window').classList.add('hidden'); activeChatPh = ""; }
-    function delStory(k) { if(confirm("Delete this story?")) db.ref('stories/'+k).remove(); }
     function logout() { auth.signOut(); localStorage.clear(); location.reload(); }
     function setNotice() { const m = prompt("Enter Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
 
@@ -518,4 +494,3 @@
 </script>
 </body>
 </html>
-

@@ -4,99 +4,78 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STORY PRO - Master Edition</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
     <style>
+        /* Offline Message Style */
+        #offline-message {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.98);
+            z-index: 99999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, sans-serif;
+        }
+        #offline-message h2 { font-size: 28px; margin-bottom: 10px; color: #7360f2; }
+        #offline-message p { font-size: 16px; color: #ccc; margin-bottom: 25px; padding: 0 20px; }
+        #offline-message button { 
+            padding: 12px 30px; border-radius: 25px; 
+            background: #7360f2; border: none; color: white; 
+            font-weight: bold; cursor: pointer;
+        }
+        
+        /* Original Styles */
         :root { --viber: #7360f2; --glass: rgba(0, 0, 0, 0.75); }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #000; color: white; min-height: 100vh; }
-        .card { background: rgba(255,255,255,0.1); padding: 15px; margin: 10px; border-radius: 15px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #000 no-repeat center center fixed; background-size: cover; color: white; min-height: 100vh; transition: 0.5s; overflow-x: hidden; }
+        .content-wrap { min-height: 100vh; display: flex; flex-direction: column; }
         .hidden { display: none !important; }
-        button { padding: 8px 15px; border-radius: 10px; border: none; cursor: pointer; color: white; }
+        header { background: var(--viber); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; position: sticky; top: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        #notice-bar { background: #f1c40f; color: #000; padding: 10px; font-size: 13px; font-weight: bold; text-align: center; border-bottom: 2px solid #d35400; display: none; }
+        .page { flex: 1; padding-bottom: 90px; }
+        .card { background: var(--glass); backdrop-filter: blur(10px); padding: 15px; margin: 10px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative; }
+        .story-img { width: 100%; border-radius: 10px; margin-top: 10px; display: block; max-height: 300px; object-fit: cover; }
+        .nav-bar { background: #000; display: flex; height: 70px; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #333; z-index: 100; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #aaa; cursor: pointer; }
+        .nav-item.active { color: white; font-weight: bold; }
+        input, button, textarea { border-radius: 12px; border: 1px solid #444; padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; background: #111; color: white; outline: none; }
+        button { cursor: pointer; transition: 0.3s; }
+        button:active { transform: scale(0.98); }
+        #chat-window, #story-detail-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
+        .fr-btn { width: auto; padding: 6px 12px; font-size: 11px; background: #3498db; border: none; border-radius: 10px; color: white; }
+        .p-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #333; border: 1px solid #444; }
+        .auth-link { text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:15px; }
+        .auth-link b { color: var(--viber); }
+        .friend-tabs { display: flex; gap: 10px; margin: 10px; }
+        .f-tab { flex: 1; padding: 10px; text-align: center; background: #222; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: bold; border: 1px solid #333; }
+        .f-tab.active { background: var(--viber); border-color: var(--viber); color: white; }
+        .catalog-item { cursor: pointer; transition: 0.2s; }
+        .catalog-item:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body>
 
-<div id="story-detail-window" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#000; padding:20px;">
-    <span onclick="closeStoryDetail()" style="cursor:pointer;">⬅ Back</span>
-    <div id="detail-container"></div>
-</div>
+    <div id="offline-message">
+        <h2>අන්තර්ජාලය විසන්ධි වී ඇත!</h2>
+        <p>කරුණාකර ඔබගේ දත්ත සම්බන්ධතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න.</p>
+        <button onclick="location.reload()">නැවත උත්සාහ කරන්න</button>
+    </div>
 
-<script>
-    // Firebase Config එලෙසම ඇත
-    // ... (ඔබේ කලින් තිබූ Firebase Config සහ අනෙක් functions)
+    <script>
+        window.addEventListener('offline', function() { document.getElementById('offline-message').style.display = 'flex'; });
+        window.addEventListener('online', function() { document.getElementById('offline-message').style.display = 'none'; location.reload(); });
+        if (!navigator.onLine) { document.getElementById('offline-message').style.display = 'flex'; }
+    </script>
 
-    function viewFullStory(key) {
-        const s = fullStoriesObjects[key];
-        if (!s) return;
-        
-        const hasLiked = s.likes && s.likes[myId];
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-        document.getElementById('detail-container').innerHTML = `
-            <div class="card">
-                <h2>${s.user}</h2>
-                <div style="white-space: pre-wrap;">${formatText(s.text)}</div>
-                ${s.img ? `<img src="${s.img}" style="width:100%;">` : ''}
-                
-                <div style="margin-top:15px;">
-                    <button onclick="toggleLike('${key}')" style="background:${hasLiked ? '#e74c3c' : '#333'};">
-                        ${hasLiked ? '❤️ Liked' : '🤍 Like'}
-                    </button>
-                </div>
-
-                <div style="margin-top:20px;">
-                    <h4>Comments</h4>
-                    <div id="comment-list" style="margin-bottom:10px;"></div>
-                    <input id="comm-input" style="color:black;" placeholder="Write a comment...">
-                    <button onclick="postComment('${key}')" style="background:var(--viber);">Post</button>
-                </div>
-            </div>
-        `;
-        loadComments(key);
-        document.getElementById('story-detail-window').classList.remove('hidden');
-    }
-
-    function toggleLike(key) {
-        const likeRef = db.ref('stories/' + key + '/likes/' + myId);
-        likeRef.once('value', snap => {
-            if (snap.exists()) {
-                likeRef.remove();
-            } else {
-                likeRef.set(true);
-            }
-            // Like කළ පසු නැවත View එක Refresh කරන්න
-            viewFullStory(key);
-        });
-    }
-
-    function postComment(key) {
-        const msg = document.getElementById('comm-input').value.trim();
-        if (!msg) return;
-        db.ref('stories/' + key + '/comments').push({
-            user: myNm,
-            text: msg,
-            time: Date.now()
-        }).then(() => {
-            document.getElementById('comm-input').value = "";
-        });
-    }
-
-    function loadComments(key) {
-        db.ref('stories/' + key + '/comments').on('value', snap => {
-            const list = document.getElementById('comment-list');
-            list.innerHTML = "";
-            snap.forEach(c => {
-                list.innerHTML += `<div style="font-size:12px; background:#222; padding:5px; margin-bottom:5px;">
-                    <b>${c.val().user}:</b> ${c.val().text}
-                </div>`;
-            });
-        });
-    }
-
-    function closeStoryDetail() { 
-        document.getElementById('story-detail-window').classList.add('hidden'); 
-    }
-</script>
+    <div class="content-wrap">
+        </div>
 
 </body>
 </html>

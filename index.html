@@ -226,9 +226,16 @@
         });
     };
 
+    // 🛡️ හැකර්ලා දාන කිසිම HTML Tag එකක් (img, script, iframe) රන් වෙන්න නොදී අකුරු බවට හරවන සේෆ් ෆන්ක්ෂන් එක
     function formatText(t) { 
         if(!t) return "";
-        return t.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); 
+        let safeText = t
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        return safeText.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); 
     }
 
     function syncApp() {
@@ -432,8 +439,6 @@
         const input = document.getElementById(`c-input-${storyKey}`);
         const txt = input.value.trim();
         if(!txt) return;
-        if(txt.includes("<script>") || txt.includes("javascript:")) { return alert("Coding ඇතුළත් කළ නොහැක!"); }
-
         db.ref(`stories/${storyKey}/comments`).push({
             userId: myId,
             userName: myNm,
@@ -454,13 +459,11 @@
     function searchUsers() { const q = document.getElementById('search-user').value.toLowerCase(); const res = document.getElementById('search-results'); if(q.length < 2) { res.innerHTML = ""; return; } db.ref('users').once('value', snap => { res.innerHTML = ""; snap.forEach(u => { if(u.val().name.toLowerCase().includes(q) && u.key !== myId) { res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;"><span>${u.val().name}</span><button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button></div>`; } }); }); }
     function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm}); alert("Friend request sent to " + toNm); }
     
-    // 🛠️ එකම නම කිහිප සැරයක් වැටෙන ලෙඩේ Filter කරන කොටස මෙතන තියෙනවා.
     function loadFriends() { 
         db.ref('friends/'+myId).on('value', snap => { 
             const c = document.getElementById('cons'); c.innerHTML = ""; 
             const reqsList = document.getElementById('reqs-list'); reqsList.innerHTML = "";
             let hasRequests = false;
-            
             const displayedUsers = new Set();
 
             snap.forEach(f => { 
@@ -487,7 +490,7 @@
     function acc(targetId, nm) { db.ref('friends/'+myId+'/'+targetId).set({status:'accepted', name:nm}); db.ref('friends/'+targetId+'/'+myId).set({status:'accepted', name:myNm}); }
     function openChat(targetId, name) { activeChatPh = targetId; document.getElementById('chat-name').innerText = name; document.getElementById('chat-window').classList.remove('hidden'); const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId; db.ref('messages/'+cid).on('value', s => { const mc = document.getElementById('msg-container'); mc.innerHTML = ""; s.forEach(m => { const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;'; mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px; word-wrap: break-word;">${formatText(m.val().msg)}</div>`; }); mc.scrollTop = mc.scrollHeight; }); }
     function sendMsg() { const msg = document.getElementById('msg-input').value.trim(); if(!msg) return; const cid = myId < activeChatPh ? myId+"_"+activeChatPh : activeChatPh+"_"+myId; db.ref('messages/'+cid).push({ sender: myId, msg: msg, time: Date.now() }); document.getElementById('msg-input').value = ""; }
-    function pg(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
+    function pg(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.xl.classList.add('active'); }
     function openStoryModal() { editKey = null; storyImgData = ""; document.getElementById('si').value = ""; document.getElementById('m-title').innerText = "New Post"; document.getElementById('img-field').classList.remove('hidden'); document.getElementById('sm').classList.remove('hidden'); }
     function editStory(k) { editKey = k; document.getElementById('m-title').innerText = "Edit Post"; document.getElementById('si').value = rawStories[k]; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); }
     function closeModal() { document.getElementById('sm').classList.add('hidden'); }

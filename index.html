@@ -209,6 +209,8 @@
                             myId = encodedEmail;
                             myNm = snap.val().name;
                             start();
+                        } else {
+                            showLoginView();
                         }
                     });
                 } else {
@@ -217,7 +219,9 @@
                     showLoginView();
                 }
             } else {
-                if(myId) { start(); } else { showLoginView(); }
+                localStorage.clear();
+                myId = "";
+                showLoginView();
             }
         });
     };
@@ -257,7 +261,7 @@
                         start();
                     });
                 } else {
-                    alert("ඔබේ ගිණුම තවමත් තහවුරු කර නැත! කරුණාකර Gmail inbox බලන්න.");
+                    alert("ඔබේ ගิණුම තවමත් තහවුරු කර නැත! කරුණාකර Gmail inbox බලන්න.");
                     auth.signOut();
                 }
             }).catch((error) => { alert("Login Failed: " + error.message); });
@@ -348,7 +352,6 @@
                     </div>
                 `);
             });
-            // If detail window is open, refresh it dynamically
             if(!document.getElementById('story-detail-window').classList.contains('hidden') && activeChatPh) {
                 viewFullStory(activeChatPh);
             }
@@ -356,7 +359,7 @@
     }
 
     function viewFullStory(key) {
-        activeChatPh = key; // Using this to track current viewing story key
+        activeChatPh = key; 
         const s = fullStoriesObjects[key];
         if(!s) return;
         
@@ -418,7 +421,6 @@
         document.getElementById('story-detail-window').classList.remove('hidden');
     }
 
-    // LIKE TOGGLE FUNCTION
     function toggleLike(storyKey) {
         const likeRef = db.ref(`stories/${storyKey}/likes/${myId}`);
         likeRef.once('value', snap => {
@@ -426,7 +428,6 @@
         });
     }
 
-    // ADD COMMENT FUNCTION (With script filtering)
     function addComment(storyKey) {
         const input = document.getElementById(`c-input-${storyKey}`);
         const txt = input.value.trim();
@@ -441,29 +442,35 @@
         }).then(() => { input.value = ""; });
     }
 
-    // DELETE COMMENT FUNCTION
-    function deleteComment(storyKey, commentKey) {
-        if(confirm("මෙම Comment එක මකන්නද?")) {
-            db.ref(`stories/${storyKey}/comments/${commentKey}`).remove();
-        }
-    }
+    document.getElementById('p-pic-up').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('users/'+myId+'/pic').set(ev.target.result); r.readAsDataURL(f); } });
+    document.getElementById('bg-upload').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); } });
+    document.getElementById('img-input').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>storyImgData=ev.target.result; r.readAsDataURL(f); } });
 
+    function deleteComment(storyKey, commentKey) { if(confirm("මෙම Comment එක මකන්නද?")) { db.ref(`stories/${storyKey}/comments/${commentKey}`).remove(); } }
     function triggerEditFromDetail(key) { closeStoryDetail(); editStory(key); }
     function triggerDeleteFromDetail(key) { if(confirm("Delete this story?")) { db.ref('stories/'+key).remove(); closeStoryDetail(); } }
     function closeStoryDetail() { document.getElementById('story-detail-window').classList.add('hidden'); activeChatPh = ""; }
-
     function postStory() { const txt = document.getElementById('si').value.trim(); if(!txt) return alert("Write something!"); if(editKey) { db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); }); } else { db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => { closeModal(); }); } }
     function searchUsers() { const q = document.getElementById('search-user').value.toLowerCase(); const res = document.getElementById('search-results'); if(q.length < 2) { res.innerHTML = ""; return; } db.ref('users').once('value', snap => { res.innerHTML = ""; snap.forEach(u => { if(u.val().name.toLowerCase().includes(q) && u.key !== myId) { res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;"><span>${u.val().name}</span><button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button></div>`; } }); }); }
     function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm}); alert("Friend request sent to " + toNm); }
     
+    // 🛠️ එකම නම කිහිප සැරයක් වැටෙන ලෙඩේ Filter කරන කොටස මෙතන තියෙනවා.
     function loadFriends() { 
         db.ref('friends/'+myId).on('value', snap => { 
             const c = document.getElementById('cons'); c.innerHTML = ""; 
             const reqsList = document.getElementById('reqs-list'); reqsList.innerHTML = "";
             let hasRequests = false;
+            
+            const displayedUsers = new Set();
+
             snap.forEach(f => { 
                 const data = f.val(); 
+                const userIdKey = f.key.toLowerCase();
+
                 if(data.status === 'accepted') { 
+                    if (displayedUsers.has(userIdKey)) return;
+                    displayedUsers.add(userIdKey);
+
                     db.ref('users/'+f.key+'/pic').once('value', p => { 
                         const img = p.exists() ? p.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png"; 
                         c.insertAdjacentHTML('beforeend', ` <div class="card" onclick="openChat('${f.key}','${data.name}')" style="display:flex; align-items:center; gap:12px; cursor:pointer;"><img src="${img}" class="p-img"><div><b>${data.name}</b><div style="font-size:10px; color:#888;">Tap to chat</div></div></div> `); 
@@ -487,10 +494,6 @@
     function closeChat() { document.getElementById('chat-window').classList.add('hidden'); activeChatPh = ""; }
     function logout() { auth.signOut(); localStorage.clear(); location.reload(); }
     function setNotice() { const m = prompt("Enter Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
-
-    document.getElementById('p-pic-up').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('users/'+myId+'/pic').set(ev.target.result); r.readAsDataURL(f); } });
-    document.getElementById('bg-upload').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); } });
-    document.getElementById('img-input').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>storyImgData=ev.target.result; r.readAsDataURL(f); } });
 </script>
 </body>
 </html>

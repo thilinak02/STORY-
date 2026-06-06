@@ -188,7 +188,6 @@
 
     const ADMIN_EMAIL = "thilinak02@gmail.com"; 
     
-    // 🔑 Base64 වෙනුවට සැබෑ Secure UID පාවිච්චි කරයි
     let myId = localStorage.getItem("myId") || ""; 
     let myNm = localStorage.getItem("nm") || "";
     let activeChatPh = "";
@@ -202,11 +201,12 @@
         auth.onAuthStateChanged((user) => {
             if (user) {
                 if (user.emailVerified || user.email === ADMIN_EMAIL) {
-                    db.ref('users/' + user.uid).once('value', snap => {
+                    const encodedEmail = btoa(user.email.toLowerCase()).replace(/=/g, "");
+                    db.ref('users/' + encodedEmail).once('value', snap => {
                         if(snap.exists()) {
-                            localStorage.setItem("myId", user.uid);
+                            localStorage.setItem("myId", encodedEmail);
                             localStorage.setItem("nm", snap.val().name);
-                            myId = user.uid;
+                            myId = encodedEmail;
                             myNm = snap.val().name;
                             start();
                         }
@@ -246,12 +246,13 @@
             .then((userCredential) => {
                 const user = userCredential.user;
                 if (user.emailVerified || email === ADMIN_EMAIL) {
-                    db.ref('users/' + user.uid).once('value', snap => {
+                    const encodedEmail = btoa(email).replace(/=/g, "");
+                    db.ref('users/' + encodedEmail).once('value', snap => {
                         let currentName = "User";
                         if (snap.exists()) currentName = snap.val().name;
-                        localStorage.setItem("myId", user.uid);
+                        localStorage.setItem("myId", encodedEmail);
                         localStorage.setItem("nm", currentName);
-                        myId = user.uid;
+                        myId = encodedEmail;
                         myNm = currentName;
                         start();
                     });
@@ -268,26 +269,26 @@
         const pwd = document.getElementById('reg-pwd').value.trim();
         if (!email || !name || !pwd) return alert("කරුණාකර සියලුම විස්තර ඇතුළත් කරන්න.");
         if (pwd.length < 6) return alert("Password එක සඳහා අවම වශයෙන් අකුරු 6ක්වත් දෙන්න.");
-        
-        auth.createUserWithEmailAndPassword(email, pwd)
-            .then((userCredential) => {
-                const user = userCredential.user;
-                user.sendEmailVerification().then(() => {
-                    const isAdmin = (email === ADMIN_EMAIL);
-                    const finalName = isAdmin ? "Admin" : name;
-                    
-                    // 🛡️ සැබෑ User.uid එක යටතේ ඩේටාබේස් එකේ සේව් කරමු (Rules වලට ගැළපෙන ක්‍රමය)
-                    db.ref('users/' + user.uid).set({ 
-                        name: finalName, 
-                        email: email,
-                        username: finalName.toLowerCase() // Indexing සඳහා
-                    }).then(() => {
-                        alert("ලියාපදිංචිය සාර්ථකයි! Verification ලින්ක් එක Gmail එකට එවා ඇත. එය ක්ලික් කර ගිණුම සක්‍රීය කරගන්න.");
-                        auth.signOut();
-                        showLoginView();
-                    });
-                });
-            }).catch((error) => { alert("Registration Failed: " + error.message); });
+        const encodedEmail = btoa(email).replace(/=/g, "");
+        db.ref('users/' + encodedEmail).once('value', snap => {
+            if (snap.exists()) {
+                alert("මේ Gmail ලිපිනයෙන් දැනටමත් ගිණුමක් සාදා ඇත.");
+                showLoginView();
+            } else {
+                auth.createUserWithEmailAndPassword(email, pwd)
+                    .then((userCredential) => {
+                        userCredential.user.sendEmailVerification().then(() => {
+                            const isAdmin = (email === ADMIN_EMAIL);
+                            const finalName = isAdmin ? "Admin" : name;
+                            db.ref('users/' + encodedEmail).set({ name: finalName, email: email }).then(() => {
+                                alert("ලියාපදිංචිය සාර්ථකයි! Verification ලින්ක් එක ක්ලික් කර ගිණුම සක්‍රීය කරගන්න.");
+                                auth.signOut();
+                                showLoginView();
+                            });
+                        });
+                    }).catch((error) => { alert("Registration Failed: " + error.message); });
+            }
+        });
     }
 
     function sendPasswordReset() {
@@ -304,10 +305,8 @@
         document.getElementById('auth-page').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
         document.getElementById('myn').innerText = "Hi, " + myNm;
-        
-        if(auth.currentUser && auth.currentUser.email === ADMIN_EMAIL) {
-            document.getElementById('adm-area').classList.remove('hidden');
-        }
+        const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
+        if(myId === adminEncoded) document.getElementById('adm-area').classList.remove('hidden');
         db.ref('users/'+myId+'/pic').on('value', snap => { if(snap.exists()) document.getElementById('my-p-img').src = snap.val(); });
         loadStories();
         loadFriends();
@@ -349,6 +348,7 @@
                     </div>
                 `);
             });
+            // If detail window is open, refresh it dynamically
             if(!document.getElementById('story-detail-window').classList.contains('hidden') && activeChatPh) {
                 viewFullStory(activeChatPh);
             }
@@ -356,11 +356,12 @@
     }
 
     function viewFullStory(key) {
-        activeChatPh = key; 
+        activeChatPh = key; // Using this to track current viewing story key
         const s = fullStoriesObjects[key];
         if(!s) return;
         
-        const canEdit = (s.uPh === myId || (auth.currentUser && auth.currentUser.email === ADMIN_EMAIL));
+        const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
+        const canEdit = (s.uPh === myId || myId === adminEncoded);
         const isLiked = (s.likes && s.likes[myId]) ? "liked" : "";
         const likeCount = s.likes ? Object.keys(s.likes).length : 0;
         
@@ -371,7 +372,7 @@
         if(s.comments) {
             Object.keys(s.comments).forEach(cKey => {
                 const c = s.comments[cKey];
-                const showDel = (c.userId === myId || (auth.currentUser && auth.currentUser.email === ADMIN_EMAIL)) ? `<button class="comment-del-btn" onclick="deleteComment('${key}','${cKey}')">🗑️</button>` : "";
+                const showDel = (c.userId === myId || myId === adminEncoded) ? `<button class="comment-del-btn" onclick="deleteComment('${key}','${cKey}')">🗑️</button>` : "";
                 commentsHTML += `
                     <div class="single-comment">
                         <b style="color:var(--viber); font-size:12px;">${c.userName}</b>
@@ -417,6 +418,7 @@
         document.getElementById('story-detail-window').classList.remove('hidden');
     }
 
+    // LIKE TOGGLE FUNCTION
     function toggleLike(storyKey) {
         const likeRef = db.ref(`stories/${storyKey}/likes/${myId}`);
         likeRef.once('value', snap => {
@@ -424,23 +426,22 @@
         });
     }
 
+    // ADD COMMENT FUNCTION (With script filtering)
     function addComment(storyKey) {
         const input = document.getElementById(`c-input-${storyKey}`);
         const txt = input.value.trim();
         if(!txt) return;
-        
-        // Rules වලින් බ්ලොක් කරත්, Front-end එකෙනුත් ආරක්ෂාව තහවුරු කරමු
-        if(txt.includes("<") || txt.includes(">")) { return alert("HTML හෝ Coding ඇතුළත් කළ නොහැක!"); }
+        if(txt.includes("<script>") || txt.includes("javascript:")) { return alert("Coding ඇතුළත් කළ නොහැක!"); }
 
         db.ref(`stories/${storyKey}/comments`).push({
             userId: myId,
             userName: myNm,
             text: txt,
-            uid: myId, // රූල් එකට අනුව තමන්ගේ UID එක අනිවාර්යයි
             time: Date.now()
         }).then(() => { input.value = ""; });
     }
 
+    // DELETE COMMENT FUNCTION
     function deleteComment(storyKey, commentKey) {
         if(confirm("මෙම Comment එක මකන්නද?")) {
             db.ref(`stories/${storyKey}/comments/${commentKey}`).remove();
@@ -451,34 +452,9 @@
     function triggerDeleteFromDetail(key) { if(confirm("Delete this story?")) { db.ref('stories/'+key).remove(); closeStoryDetail(); } }
     function closeStoryDetail() { document.getElementById('story-detail-window').classList.add('hidden'); activeChatPh = ""; }
 
-    function postStory() { 
-        const txt = document.getElementById('si').value.trim(); 
-        if(!txt) return alert("Write something!"); 
-        
-        if(editKey) { 
-            db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); }); 
-        } else { 
-            db.ref('stories').push({ uPh:myId, user:myNm, uid:myId, text:txt, img:storyImgData, time:Date.now() }).then(() => { closeModal(); }); 
-        } 
-    }
-    
-    function searchUsers() { 
-        const q = document.getElementById('search-user').value.toLowerCase().trim(); 
-        const res = document.getElementById('search-results'); 
-        if(q.length < 2) { res.innerHTML = ""; return; } 
-        
-        // ⚡ .indexOn එකට ගැළපෙන සුපිරි Fast Query එකක් මෙතනට දැම්මා
-        db.ref('users').orderByChild('username').startAt(q).endAt(q+'\uf8ff').once('value', snap => { 
-            res.innerHTML = ""; 
-            snap.forEach(u => { 
-                if(u.key !== myId) { 
-                    res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;"><span>${u.val().name}</span><button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button></div>`; 
-                } 
-            }); 
-        }); 
-    }
-    
-    function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm, uid:myId}); alert("Friend request sent to " + toNm); }
+    function postStory() { const txt = document.getElementById('si').value.trim(); if(!txt) return alert("Write something!"); if(editKey) { db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); }); } else { db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => { closeModal(); }); } }
+    function searchUsers() { const q = document.getElementById('search-user').value.toLowerCase(); const res = document.getElementById('search-results'); if(q.length < 2) { res.innerHTML = ""; return; } db.ref('users').once('value', snap => { res.innerHTML = ""; snap.forEach(u => { if(u.val().name.toLowerCase().includes(q) && u.key !== myId) { res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;"><span>${u.val().name}</span><button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button></div>`; } }); }); }
+    function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm}); alert("Friend request sent to " + toNm); }
     
     function loadFriends() { 
         db.ref('friends/'+myId).on('value', snap => { 
@@ -501,43 +477,16 @@
         }); 
     }
 
-    function acc(targetId, nm) { db.ref('friends/'+myId+'/'+targetId).set({status:'accepted', name:nm, uid:myId}); db.ref('friends/'+targetId+'/'+myId).set({status:'accepted', name:myNm, uid:targetId}); }
-    
-    function openChat(targetId, name) { 
-        activeChatPh = targetId; 
-        document.getElementById('chat-name').innerText = name; 
-        document.getElementById('chat-window').classList.remove('hidden'); 
-        const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId; 
-        
-        db.ref('messages/'+cid).on('value', s => { 
-            const mc = document.getElementById('msg-container'); mc.innerHTML = ""; 
-            s.forEach(m => { 
-                const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;'; 
-                mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px; word-wrap: break-word;">${formatText(m.val().msg)}</div>`; 
-            }); 
-            mc.scrollTop = mc.scrollHeight; 
-        }); 
-    }
-    
-    function sendMsg() { 
-        const msg = document.getElementById('msg-input').value.trim(); 
-        if(!msg) return; 
-        const cid = myId < activeChatPh ? myId+"_"+activeChatPh : activeChatPh+"_"+myId; 
-        db.ref('messages/'+cid).push({ sender: myId, msg: msg, time: Date.now() }); 
-        document.getElementById('msg-input').value = ""; 
-    }
-    
+    function acc(targetId, nm) { db.ref('friends/'+myId+'/'+targetId).set({status:'accepted', name:nm}); db.ref('friends/'+targetId+'/'+myId).set({status:'accepted', name:myNm}); }
+    function openChat(targetId, name) { activeChatPh = targetId; document.getElementById('chat-name').innerText = name; document.getElementById('chat-window').classList.remove('hidden'); const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId; db.ref('messages/'+cid).on('value', s => { const mc = document.getElementById('msg-container'); mc.innerHTML = ""; s.forEach(m => { const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;'; mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px; word-wrap: break-word;">${formatText(m.val().msg)}</div>`; }); mc.scrollTop = mc.scrollHeight; }); }
+    function sendMsg() { const msg = document.getElementById('msg-input').value.trim(); if(!msg) return; const cid = myId < activeChatPh ? myId+"_"+activeChatPh : activeChatPh+"_"+myId; db.ref('messages/'+cid).push({ sender: myId, msg: msg, time: Date.now() }); document.getElementById('msg-input').value = ""; }
     function pg(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
     function openStoryModal() { editKey = null; storyImgData = ""; document.getElementById('si').value = ""; document.getElementById('m-title').innerText = "New Post"; document.getElementById('img-field').classList.remove('hidden'); document.getElementById('sm').classList.remove('hidden'); }
     function editStory(k) { editKey = k; document.getElementById('m-title').innerText = "Edit Post"; document.getElementById('si').value = rawStories[k]; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); }
     function closeModal() { document.getElementById('sm').classList.add('hidden'); }
     function closeChat() { document.getElementById('chat-window').classList.add('hidden'); activeChatPh = ""; }
     function logout() { auth.signOut(); localStorage.clear(); location.reload(); }
-    
-    function setNotice() { 
-        const m = prompt("Enter Notice:"); 
-        if(m!==null) db.ref('appConfig/notice').set(m); 
-    }
+    function setNotice() { const m = prompt("Enter Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
 
     document.getElementById('p-pic-up').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('users/'+myId+'/pic').set(ev.target.result); r.readAsDataURL(f); } });
     document.getElementById('bg-upload').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('appConfig/bgImage').set(ev.target.result); r.readAsDataURL(f); } });

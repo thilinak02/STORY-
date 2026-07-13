@@ -30,6 +30,8 @@
 
         #chat-window, #story-detail-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; }
         .fr-btn { width: auto; padding: 6px 12px; font-size: 11px; background: #3498db; border: none; border-radius: 10px; color: white; }
+        /* Share බොත්තම සඳහා එකතු කළ CSS */
+        .share-btn { background: #27ae60; border: none; padding: 5px 12px; border-radius: 10px; color: white; cursor: pointer; font-size: 11px; }
         .p-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #333; border: 1px solid #444; }
         .see-more { color: #3498db; cursor: pointer; font-weight: bold; margin-left: 5px; }
         .auth-link { text-align:center; font-size:12px; cursor:pointer; color:#aaa; margin-top:15px; }
@@ -41,7 +43,6 @@
         .catalog-item { cursor: pointer; transition: 0.2s; }
         .catalog-item:hover { transform: translateY(-2px); }
 
-        /* Like & Comment Styles */
         .action-bar { display: flex; gap: 15px; margin-top: 10px; border-top: 1px solid #222; padding-top: 10px; }
         .act-btn { background: none; border: none; color: #aaa; width: auto; padding: 5px 10px; font-size: 13px; display: flex; align-items: center; gap: 5px; }
         .act-btn.liked { color: #e74c3c; font-weight: bold; }
@@ -54,6 +55,7 @@
 <body>
 
 <div class="content-wrap">
+    <!-- Auth Pages -->
     <div id="auth-page" class="hidden" style="padding:40px;">
         <div class="card" id="login-section">
             <h2 style="text-align:center;">STORY PRO</h2>
@@ -64,20 +66,16 @@
             <p onclick="showForgotPwdView()" style="text-align:center; font-size:12px; cursor:pointer; color:#e74c3c; margin-top:15px; font-weight:bold;">Forgot Password?</p>
             <p onclick="showRegisterView()" class="auth-link">First time here? <b>Register Account</b></p>
         </div>
-
         <div class="card hidden" id="register-section">
             <h3 style="text-align:center; margin-top:0;">Create Account</h3>
-            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Enter details. We will double-check your Gmail dynamically.</p>
             <input id="reg-email" type="email" placeholder="Enter your real Gmail address">
             <input id="reg-name" placeholder="Choose a Username / Display Name">
             <input id="reg-pwd" type="password" placeholder="Create a Password (Min 6 chars)">
             <button onclick="registerWithVerification()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">REGISTER ACCOUNT</button>
             <p onclick="showLoginView()" class="auth-link">Already have an account? <b>Login</b></p>
         </div>
-
         <div class="card hidden" id="forgot-pwd-section">
             <h3 style="text-align:center; margin-top:0;">Reset Password</h3>
-            <p style="text-align:center; font-size:12px; color:#aaa; margin-bottom:20px;">Enter your Gmail address below. We will send you a secure link to reset your password.</p>
             <input id="forgot-email" type="email" placeholder="Enter your Gmail address">
             <button onclick="sendPasswordReset()" style="background:#e67e22; border:none; font-weight:bold; margin-top:15px;">SEND RESET LINK</button>
             <p onclick="showLoginView()" class="auth-link">Back to <b>Login</b></p>
@@ -92,7 +90,6 @@
                 </label>
                 <input type="file" id="p-pic-up" class="hidden" accept="image/*">
                 <b id="myn">Story Pro</b>
-                
                 <div id="adm-area" class="hidden" style="display:flex; gap:5px;">
                     <label for="bg-upload" style="background:red; font-size:9px; padding:4px 8px; border-radius:5px; cursor:pointer;">BG</label>
                     <button onclick="setNotice()" style="background:orange; font-size:9px; padding:4px 8px; border-radius:5px; width:auto; border:none; margin:0; color:black;">NOTICE</button>
@@ -185,9 +182,7 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
-
     const ADMIN_EMAIL = "thilinak02@gmail.com"; 
-    
     let myId = localStorage.getItem("myId") || ""; 
     let myNm = localStorage.getItem("nm") || "";
     let activeChatPh = "";
@@ -195,6 +190,20 @@
     let storyImgData = "";
     let rawStories = {};
     let fullStoriesObjects = {};
+
+    // --- Share කිරීමේ Function එක ---
+    function shareStory(key) {
+        const s = fullStoriesObjects[key];
+        if (navigator.share) {
+            navigator.share({
+                title: 'Story Pro',
+                text: s.text.substring(0, 100) + "...",
+                url: window.location.href
+            }).catch((error) => console.log('Error sharing:', error));
+        } else {
+            alert("ඔබගේ උපාංගය Share කිරීමට සහය නොදක්වයි.");
+        }
+    }
 
     window.onload = () => {
         syncApp();
@@ -209,32 +218,19 @@
                             myId = encodedEmail;
                             myNm = snap.val().name;
                             start();
-                        } else {
-                            showLoginView();
-                        }
+                        } else { showLoginView(); }
                     });
                 } else {
                     alert("කරුණාකර ඔබගේ Gmail ලිපිනයට පැමිණි Verification ලින්ක් එක ක්ලික් කර ගිණුම තහවුරු කරන්න.");
                     auth.signOut();
-                    showLoginView();
                 }
-            } else {
-                localStorage.clear();
-                myId = "";
-                showLoginView();
-            }
+            } else { localStorage.clear(); myId = ""; showLoginView(); }
         });
     };
 
-    // 🛡️ හැකර්ලා දාන කිසිම HTML Tag එකක් (img, script, iframe) රන් වෙන්න නොදී අකුරු බවට හරවන සේෆ් ෆන්ක්ෂන් එක
     function formatText(t) { 
         if(!t) return "";
-        let safeText = t
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+        let safeText = t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         return safeText.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); 
     }
 
@@ -242,10 +238,7 @@
         db.ref('appConfig/bgImage').on('value', snap => { if(snap.exists()) document.body.style.backgroundImage = `url('${snap.val()}')`; });
         db.ref('appConfig/notice').on('value', snap => {
             const bar = document.getElementById('notice-bar');
-            if(snap.exists() && snap.val().trim() !== "") { 
-                bar.innerHTML = "📢 " + formatText(snap.val()); 
-                bar.style.display = "block"; 
-            } else { bar.style.display = "none"; }
+            if(snap.exists() && snap.val().trim() !== "") { bar.innerHTML = "📢 " + formatText(snap.val()); bar.style.display = "block"; } else { bar.style.display = "none"; }
         });
     }
 
@@ -253,25 +246,7 @@
         const email = document.getElementById('login-email').value.trim().toLowerCase();
         const pwd = document.getElementById('login-pwd').value.trim();
         if (!email || !pwd) return alert("කරුණාකර Gmail ලිපිනය සහ Password ඇතුළත් කරන්න.");
-        auth.signInWithEmailAndPassword(email, pwd)
-            .then((userCredential) => {
-                const user = userCredential.user;
-                if (user.emailVerified || email === ADMIN_EMAIL) {
-                    const encodedEmail = btoa(email).replace(/=/g, "");
-                    db.ref('users/' + encodedEmail).once('value', snap => {
-                        let currentName = "User";
-                        if (snap.exists()) currentName = snap.val().name;
-                        localStorage.setItem("myId", encodedEmail);
-                        localStorage.setItem("nm", currentName);
-                        myId = encodedEmail;
-                        myNm = currentName;
-                        start();
-                    });
-                } else {
-                    alert("ඔබේ ගิණුම තවමත් තහවුරු කර නැත! කරුණාකර Gmail inbox බලන්න.");
-                    auth.signOut();
-                }
-            }).catch((error) => { alert("Login Failed: " + error.message); });
+        auth.signInWithEmailAndPassword(email, pwd).catch((error) => { alert("Login Failed: " + error.message); });
     }
 
     function registerWithVerification() {
@@ -279,33 +254,22 @@
         const name = document.getElementById('reg-name').value.trim();
         const pwd = document.getElementById('reg-pwd').value.trim();
         if (!email || !name || !pwd) return alert("කරුණාකර සියලුම විස්තර ඇතුළත් කරන්න.");
-        if (pwd.length < 6) return alert("Password එක සඳහා අවම වශයෙන් අකුරු 6ක්වත් දෙන්න.");
-        const encodedEmail = btoa(email).replace(/=/g, "");
-        db.ref('users/' + encodedEmail).once('value', snap => {
-            if (snap.exists()) {
-                alert("මේ Gmail ලිපිනයෙන් දැනටමත් ගිණුමක් සාදා ඇත.");
-                showLoginView();
-            } else {
-                auth.createUserWithEmailAndPassword(email, pwd)
-                    .then((userCredential) => {
-                        userCredential.user.sendEmailVerification().then(() => {
-                            const isAdmin = (email === ADMIN_EMAIL);
-                            const finalName = isAdmin ? "Admin" : name;
-                            db.ref('users/' + encodedEmail).set({ name: finalName, email: email }).then(() => {
-                                alert("ලියාපදිංචිය සාර්ථකයි! Verification ලින්ක් එක ක්ලික් කර ගිණුම සක්‍රීය කරගන්න.");
-                                auth.signOut();
-                                showLoginView();
-                            });
-                        });
-                    }).catch((error) => { alert("Registration Failed: " + error.message); });
-            }
-        });
+        auth.createUserWithEmailAndPassword(email, pwd)
+            .then((userCredential) => {
+                userCredential.user.sendEmailVerification().then(() => {
+                    const encodedEmail = btoa(email).replace(/=/g, "");
+                    db.ref('users/' + encodedEmail).set({ name: name, email: email }).then(() => {
+                        alert("ලියාපදිංචිය සාර්ථකයි! Verification ලින්ක් එක ක්ලික් කර ගිණුම සක්‍රීය කරගන්න.");
+                        auth.signOut();
+                    });
+                });
+            }).catch((error) => { alert("Registration Failed: " + error.message); });
     }
 
     function sendPasswordReset() {
         const email = document.getElementById('forgot-email').value.trim().toLowerCase();
         if (!email) return alert("කරුණාකර Gmail ලිපිනය ඇතුළත් කරන්න.");
-        auth.sendPasswordResetEmail(email).then(() => { alert("Reset ලින්ක් එක Gmail එකට එවන ලදී."); showLoginView(); }).catch((error) => { alert("Error: " + error.message); });
+        auth.sendPasswordResetEmail(email).then(() => { alert("Reset ලින්ක් එක Gmail එකට එවන ලදී."); }).catch((error) => { alert("Error: " + error.message); });
     }
 
     function showRegisterView() { document.getElementById('login-section').classList.add('hidden'); document.getElementById('forgot-pwd-section').classList.add('hidden'); document.getElementById('register-section').classList.remove('hidden'); document.getElementById('auth-page').classList.remove('hidden'); }
@@ -338,13 +302,10 @@
                 const s = x.val(); const key = x.key; 
                 rawStories[key] = s.text;
                 fullStoriesObjects[key] = s;
-
                 let storyTitle = s.text.split('\n')[0];
                 if(storyTitle.length > 30) storyTitle = storyTitle.substring(0, 30) + "...";
-                
                 let likeCount = s.likes ? Object.keys(s.likes).length : 0;
                 let commentCount = s.comments ? Object.keys(s.comments).length : 0;
-
                 feed.insertAdjacentHTML('afterbegin', `
                     <div class="card catalog-item" onclick="viewFullStory('${key}')">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -359,9 +320,7 @@
                     </div>
                 `);
             });
-            if(!document.getElementById('story-detail-window').classList.contains('hidden') && activeChatPh) {
-                viewFullStory(activeChatPh);
-            }
+            if(!document.getElementById('story-detail-window').classList.contains('hidden') && activeChatPh) { viewFullStory(activeChatPh); }
         });
     }
 
@@ -369,7 +328,6 @@
         activeChatPh = key; 
         const s = fullStoriesObjects[key];
         if(!s) return;
-        
         const adminEncoded = btoa(ADMIN_EMAIL).replace(/=/g, "");
         const canEdit = (s.uPh === myId || myId === adminEncoded);
         const isLiked = (s.likes && s.likes[myId]) ? "liked" : "";
@@ -377,38 +335,25 @@
         
         document.getElementById('detail-author').innerText = s.user + "'s Story";
         const container = document.getElementById('detail-container');
-        
         let commentsHTML = "";
         if(s.comments) {
             Object.keys(s.comments).forEach(cKey => {
                 const c = s.comments[cKey];
                 const showDel = (c.userId === myId || myId === adminEncoded) ? `<button class="comment-del-btn" onclick="deleteComment('${key}','${cKey}')">🗑️</button>` : "";
-                commentsHTML += `
-                    <div class="single-comment">
-                        <b style="color:var(--viber); font-size:12px;">${c.userName}</b>
-                        <p style="margin:3px 0 0 0; white-space:pre-wrap;">${formatText(c.text)}</p>
-                        ${showDel}
-                    </div>`;
+                commentsHTML += `<div class="single-comment"><b style="color:var(--viber); font-size:12px;">${c.userName}</b><p style="margin:3px 0 0 0; white-space:pre-wrap;">${formatText(c.text)}</p>${showDel}</div>`;
             });
-        } else {
-            commentsHTML = `<p style="color:#666; font-size:12px; text-align:center;">No comments yet.</p>`;
         }
         
         container.innerHTML = `
             <div class="card" style="background:transparent; border:none; padding:0;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2>${s.user}</h2>
-                    ${s.uPh !== myId ? `<button class="fr-btn" onclick="sendReq('${s.uPh}','${s.user}')">➕ Friend</button>` : ''}
-                </div>
-                <hr style="border-color:#222; margin:15px 0;">
+                <h2>${s.user}</h2>
                 <div style="white-space: pre-wrap; font-size:16px; line-height:1.6; margin-bottom:20px;">${formatText(s.text)}</div>
                 ${s.img ? `<img src="${s.img}" style="width:100%; border-radius:10px; margin-bottom:20px;">` : ''}
-                
                 <div class="action-bar">
                     <button class="act-btn ${isLiked}" onclick="toggleLike('${key}')">❤️ <span>${likeCount} Likes</span></button>
                     <div class="act-btn">💬 Comments</div>
+                    <button class="share-btn" onclick="shareStory('${key}')">🔗 Share</button>
                 </div>
-
                 <div class="comment-section">
                     <div class="comment-box">${commentsHTML}</div>
                     <div style="display:flex; gap:5px;">
@@ -416,13 +361,7 @@
                         <button onclick="addComment('${key}')" style="width:auto; padding:8px 15px; background:var(--viber); border:none; margin:0; font-size:13px;">Send</button>
                     </div>
                 </div>
-                
-                ${canEdit ? `
-                    <div style="text-align:right; margin-top:20px; border-top:1px solid #222; padding-top:15px;">
-                        <button onclick="triggerEditFromDetail('${key}')" style="width:auto; display:inline-block; background:#27ae60; margin-right:10px; padding:8px 20px;">✏️ Edit</button>
-                        <button onclick="triggerDeleteFromDetail('${key}')" style="width:auto; display:inline-block; background:#c0392b; padding:8px 20px;">🗑️ Delete</button>
-                    </div>
-                ` : ''}
+                ${canEdit ? `<div style="text-align:right; margin-top:20px;"><button onclick="triggerEditFromDetail('${key}')" style="width:auto; background:#27ae60;">✏️ Edit</button> <button onclick="triggerDeleteFromDetail('${key}')" style="width:auto; background:#c0392b;">🗑️ Delete</button></div>` : ''}
             </div>
         `;
         document.getElementById('story-detail-window').classList.remove('hidden');
@@ -430,21 +369,14 @@
 
     function toggleLike(storyKey) {
         const likeRef = db.ref(`stories/${storyKey}/likes/${myId}`);
-        likeRef.once('value', snap => {
-            if(snap.exists()) { likeRef.remove(); } else { likeRef.set(true); }
-        });
+        likeRef.once('value', snap => { if(snap.exists()) { likeRef.remove(); } else { likeRef.set(true); } });
     }
 
     function addComment(storyKey) {
         const input = document.getElementById(`c-input-${storyKey}`);
         const txt = input.value.trim();
         if(!txt) return;
-        db.ref(`stories/${storyKey}/comments`).push({
-            userId: myId,
-            userName: myNm,
-            text: txt,
-            time: Date.now()
-        }).then(() => { input.value = ""; });
+        db.ref(`stories/${storyKey}/comments`).push({ userId: myId, userName: myNm, text: txt, time: Date.now() }).then(() => { input.value = ""; });
     }
 
     document.getElementById('p-pic-up').addEventListener('change', function(e) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload=(ev)=>db.ref('users/'+myId+'/pic').set(ev.target.result); r.readAsDataURL(f); } });
@@ -455,46 +387,18 @@
     function triggerEditFromDetail(key) { closeStoryDetail(); editStory(key); }
     function triggerDeleteFromDetail(key) { if(confirm("Delete this story?")) { db.ref('stories/'+key).remove(); closeStoryDetail(); } }
     function closeStoryDetail() { document.getElementById('story-detail-window').classList.add('hidden'); activeChatPh = ""; }
+    function closeChat() { document.getElementById('chat-window').classList.add('hidden'); activeChatPh = ""; }
+    function closeModal() { document.getElementById('sm').classList.add('hidden'); }
     function postStory() { const txt = document.getElementById('si').value.trim(); if(!txt) return alert("Write something!"); if(editKey) { db.ref('stories/'+editKey).update({ text: txt }).then(() => { closeModal(); }); } else { db.ref('stories').push({ uPh:myId, user:myNm, text:txt, img:storyImgData, time:Date.now() }).then(() => { closeModal(); }); } }
     function searchUsers() { const q = document.getElementById('search-user').value.toLowerCase(); const res = document.getElementById('search-results'); if(q.length < 2) { res.innerHTML = ""; return; } db.ref('users').once('value', snap => { res.innerHTML = ""; snap.forEach(u => { if(u.val().name.toLowerCase().includes(q) && u.key !== myId) { res.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; background:#222;"><span>${u.val().name}</span><button class="fr-btn" onclick="sendReq('${u.key}','${u.val().name}')">Add Friend</button></div>`; } }); }); }
     function sendReq(to, toNm) { db.ref('friends/'+to+'/'+myId).set({status:'pending', name:myNm}); alert("Friend request sent to " + toNm); }
-    
-    function loadFriends() { 
-        db.ref('friends/'+myId).on('value', snap => { 
-            const c = document.getElementById('cons'); c.innerHTML = ""; 
-            const reqsList = document.getElementById('reqs-list'); reqsList.innerHTML = "";
-            let hasRequests = false;
-            const displayedUsers = new Set();
-
-            snap.forEach(f => { 
-                const data = f.val(); 
-                const userIdKey = f.key.toLowerCase();
-
-                if(data.status === 'accepted') { 
-                    if (displayedUsers.has(userIdKey)) return;
-                    displayedUsers.add(userIdKey);
-
-                    db.ref('users/'+f.key+'/pic').once('value', p => { 
-                        const img = p.exists() ? p.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png"; 
-                        c.insertAdjacentHTML('beforeend', ` <div class="card" onclick="openChat('${f.key}','${data.name}')" style="display:flex; align-items:center; gap:12px; cursor:pointer;"><img src="${img}" class="p-img"><div><b>${data.name}</b><div style="font-size:10px; color:#888;">Tap to chat</div></div></div> `); 
-                    }); 
-                } else if(data.status === 'pending') { 
-                    hasRequests = true;
-                    reqsList.insertAdjacentHTML('beforeend', ` <div class="card" style="border:1px solid #f1c40f; background:rgba(0,0,0,0.4);"><p style="margin:0 0 10px 0; font-size:13px;">Friend Request from: <b>${data.name}</b></p><button class="fr-btn" style="background:green;" onclick="acc('${f.key}','${data.name}')">Accept Request</button></div> `); 
-                } 
-            }); 
-            if(!hasRequests) reqsList.innerHTML = `<p style="text-align:center; color:#666; font-size:13px; margin-top:20px;">No pending requests</p>`;
-        }); 
-    }
-
+    function loadFriends() { db.ref('friends/'+myId).on('value', snap => { const c = document.getElementById('cons'); c.innerHTML = ""; const reqsList = document.getElementById('reqs-list'); reqsList.innerHTML = ""; let hasRequests = false; snap.forEach(f => { const data = f.val(); if(data.status === 'accepted') { db.ref('users/'+f.key+'/pic').once('value', p => { const img = p.exists() ? p.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png"; c.insertAdjacentHTML('beforeend', `<div class="card" onclick="openChat('${f.key}','${data.name}')" style="display:flex; align-items:center; gap:12px; cursor:pointer;"><img src="${img}" class="p-img"><div><b>${data.name}</b></div></div>`); }); } else if(data.status === 'pending') { hasRequests = true; reqsList.insertAdjacentHTML('beforeend', `<div class="card" style="border:1px solid #f1c40f;"><p>Request from: <b>${data.name}</b></p><button class="fr-btn" onclick="acc('${f.key}','${data.name}')">Accept</button></div>`); } }); if(!hasRequests) reqsList.innerHTML = `<p style="text-align:center; color:#666;">No requests</p>`; }); }
     function acc(targetId, nm) { db.ref('friends/'+myId+'/'+targetId).set({status:'accepted', name:nm}); db.ref('friends/'+targetId+'/'+myId).set({status:'accepted', name:myNm}); }
-    function openChat(targetId, name) { activeChatPh = targetId; document.getElementById('chat-name').innerText = name; document.getElementById('chat-window').classList.remove('hidden'); const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId; db.ref('messages/'+cid).on('value', s => { const mc = document.getElementById('msg-container'); mc.innerHTML = ""; s.forEach(m => { const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;'; mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px; word-wrap: break-word;">${formatText(m.val().msg)}</div>`; }); mc.scrollTop = mc.scrollHeight; }); }
+    function openChat(targetId, name) { activeChatPh = targetId; document.getElementById('chat-name').innerText = name; document.getElementById('chat-window').classList.remove('hidden'); const cid = myId < targetId ? myId+"_"+targetId : targetId+"_"+myId; db.ref('messages/'+cid).on('value', s => { const mc = document.getElementById('msg-container'); mc.innerHTML = ""; s.forEach(m => { const side = m.val().sender === myId ? 'align-self:flex-end; background:var(--viber);' : 'align-self:flex-start; background:#333;'; mc.innerHTML += `<div style="${side} padding:10px; border-radius:15px; margin:5px; max-width:80%; font-size:14px;">${formatText(m.val().msg)}</div>`; }); mc.scrollTop = mc.scrollHeight; }); }
     function sendMsg() { const msg = document.getElementById('msg-input').value.trim(); if(!msg) return; const cid = myId < activeChatPh ? myId+"_"+activeChatPh : activeChatPh+"_"+myId; db.ref('messages/'+cid).push({ sender: myId, msg: msg, time: Date.now() }); document.getElementById('msg-input').value = ""; }
-    function pg(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.xl.classList.add('active'); }
-    function openStoryModal() { editKey = null; storyImgData = ""; document.getElementById('si').value = ""; document.getElementById('m-title').innerText = "New Post"; document.getElementById('img-field').classList.remove('hidden'); document.getElementById('sm').classList.remove('hidden'); }
-    function editStory(k) { editKey = k; document.getElementById('m-title').innerText = "Edit Post"; document.getElementById('si').value = rawStories[k]; document.getElementById('img-field').classList.add('hidden'); document.getElementById('sm').classList.remove('hidden'); }
-    function closeModal() { document.getElementById('sm').classList.add('hidden'); }
-    function closeChat() { document.getElementById('chat-window').classList.add('hidden'); activeChatPh = ""; }
+    function pg(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
+    function openStoryModal() { editKey = null; storyImgData = ""; document.getElementById('si').value = ""; document.getElementById('m-title').innerText = "New Post"; document.getElementById('sm').classList.remove('hidden'); }
+    function editStory(k) { editKey = k; document.getElementById('m-title').innerText = "Edit Post"; document.getElementById('si').value = rawStories[k]; document.getElementById('sm').classList.remove('hidden'); }
     function logout() { auth.signOut(); localStorage.clear(); location.reload(); }
     function setNotice() { const m = prompt("Enter Notice:"); if(m!==null) db.ref('appConfig/notice').set(m); }
 </script>

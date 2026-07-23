@@ -64,6 +64,22 @@
         .comment-box { max-height: 150px; overflow-y: auto; margin-bottom: 10px; font-size: 13px; }
         .single-comment { background: #111; padding: 8px; border-radius: 8px; margin-bottom: 5px; position: relative; }
         .comment-del-btn { position: absolute; right: 5px; top: 5px; background: none; border: none; color: #c0392b; font-size: 11px; width: auto; padding: 2px; }
+
+        /* 👤 User Profile Pop-up Modal Styles */
+        #user-profile-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9); z-index: 3000;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .profile-card {
+            background: #141414; border: 1px solid #333; width: 90%; max-width: 450px;
+            border-radius: 15px; padding: 20px; max-height: 85vh; overflow-y: auto;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.8);
+        }
+        .author-link {
+            color: #3498db; cursor: pointer; font-weight: bold; text-decoration: underline;
+        }
+        .author-link:hover { color: #5dade2; }
     </style>
 </head>
 <body>
@@ -141,6 +157,11 @@
         </div>
 
         <div id="p-stories" class="page hidden">
+            <!-- 🔍 Author & Story Live Search Bar -->
+            <div style="padding: 10px 15px 0 15px;">
+                <input type="text" id="search-story-input" placeholder="🔍 සොයන්න: කර්තෘගේ නම හෝ කතාවේ නම..." onkeyup="searchStoriesAndAuthors()" style="border-radius:20px; background:#1c1c1c; border:1px solid #333; padding:10px 15px; font-size:13px;">
+            </div>
+
             <h4 style="margin:15px;">Stories Catalog</h4>
             <div id="feed"></div>
         </div>
@@ -150,6 +171,24 @@
             <div class="nav-item" onclick="pg('p-stories',this)">📖 Stories</div>
             <div class="nav-item" onclick="openStoryModal()">➕ Post</div>
         </div>
+    </div>
+</div>
+
+<!-- 👤 User Profile Pop-up Modal -->
+<div id="user-profile-modal" class="hidden">
+    <div class="profile-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; padding-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <img id="profile-modal-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="p-img" style="width:50px; height:50px;">
+                <div>
+                    <h3 id="profile-modal-name" style="margin:0; font-size:18px;">User Profile</h3>
+                    <small id="profile-modal-email" style="color:#888;">Author Profile</small>
+                </div>
+            </div>
+            <span onclick="closeUserProfileModal()" style="font-size:24px; cursor:pointer; color:#aaa;">&times;</span>
+        </div>
+        <h4 style="margin:15px 0 10px 0; color:var(--viber);">📝 කර්තෘගේ කතා (Stories)</h4>
+        <div id="profile-stories-list"></div>
     </div>
 </div>
 
@@ -188,7 +227,7 @@
     <div id="detail-container" style="flex:1; overflow-y:auto; padding:15px; background:#050505;"></div>
 </div>
 
-<!-- 📦 JS Files අගටම දමා Performance වැඩි කර ඇත -->
+<!-- 📦 JS Files -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -330,23 +369,29 @@
         else { document.getElementById('tab-freq').classList.add('active'); document.getElementById('friend-req-area').classList.remove('hidden'); }
     }
 
-    function loadStories() {
-        db.ref('stories').on('value', snap => {
-            const feed = document.getElementById('feed'); feed.innerHTML = "";
-            fullStoriesObjects = {}; 
-            snap.forEach(x => {
-                const s = x.val(); const key = x.key; 
-                rawStories[key] = s.text;
-                fullStoriesObjects[key] = s;
-                let storyTitle = s.text.split('\n')[0];
-                if(storyTitle.length > 30) storyTitle = storyTitle.substring(0, 30) + "...";
-                let likeCount = s.likes ? Object.keys(s.likes).length : 0;
-                let commentCount = s.comments ? Object.keys(s.comments).length : 0;
-                feed.insertAdjacentHTML('afterbegin', `
-                    <div class="card catalog-item" onclick="viewFullStory('${key}')">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span>Author: <b>${s.user}</b></span>
-                        </div>
+    function renderStoriesList(storiesMap) {
+        const feed = document.getElementById('feed'); 
+        feed.innerHTML = "";
+        const keys = Object.keys(storiesMap).reverse(); // අලුත්ම කතා උඩට එන සේ
+        
+        if(keys.length === 0) {
+            feed.innerHTML = `<p style="text-align:center; color:#777; margin-top:20px;">කිසිදු කතාවක් හමු වූයේ නැත.</p>`;
+            return;
+        }
+
+        keys.forEach(key => {
+            const s = storiesMap[key];
+            let storyTitle = s.text.split('\n')[0];
+            if(storyTitle.length > 30) storyTitle = storyTitle.substring(0, 30) + "...";
+            let likeCount = s.likes ? Object.keys(s.likes).length : 0;
+            let commentCount = s.comments ? Object.keys(s.comments).length : 0;
+            
+            feed.insertAdjacentHTML('beforeend', `
+                <div class="card catalog-item">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Author: <b class="author-link" onclick="openUserProfile('${s.uPh}', '${s.user}')">${s.user}</b></span>
+                    </div>
+                    <div onclick="viewFullStory('${key}')">
                         <h3 style="margin:10px 0 5px 0; color:var(--viber); font-size:16px;">📖 ${storyTitle}</h3>
                         ${s.img ? `<img src="${s.img}" class="story-img" style="max-height:150px;">` : ''}
                         <div style="display:flex; gap:15px; font-size:12px; margin-top:8px; color:#aaa;">
@@ -354,10 +399,94 @@
                             <span>💬 ${commentCount} Comments</span>
                         </div>
                     </div>
-                `);
+                </div>
+            `);
+        });
+    }
+
+    function loadStories() {
+        db.ref('stories').on('value', snap => {
+            fullStoriesObjects = {}; 
+            rawStories = {};
+            snap.forEach(x => {
+                const s = x.val(); 
+                const key = x.key; 
+                rawStories[key] = s.text;
+                fullStoriesObjects[key] = s;
             });
+            renderStoriesList(fullStoriesObjects);
             if(!document.getElementById('story-detail-window').classList.contains('hidden') && activeChatPh) { viewFullStory(activeChatPh); }
         });
+    }
+
+    /* 🔍 Real-time Search Logic */
+    function searchStoriesAndAuthors() {
+        const query = document.getElementById('search-story-input').value.toLowerCase().trim();
+        if(!query) {
+            renderStoriesList(fullStoriesObjects);
+            return;
+        }
+        
+        const filtered = {};
+        Object.keys(fullStoriesObjects).forEach(key => {
+            const s = fullStoriesObjects[key];
+            const titleMatch = s.text && s.text.toLowerCase().includes(query);
+            const authorMatch = s.user && s.user.toLowerCase().includes(query);
+            if(titleMatch || authorMatch) {
+                filtered[key] = s;
+            }
+        });
+        renderStoriesList(filtered);
+    }
+
+    /* 👤 Open Profile Modal & Load Author Stories */
+    function openUserProfile(userId, userName) {
+        document.getElementById('profile-modal-name').innerText = userName;
+        const profileList = document.getElementById('profile-stories-list');
+        profileList.innerHTML = `<p style="color:#888; text-align:center;">කතා Load වෙමින් පවතී...</p>`;
+        
+        db.ref('users/' + userId + '/pic').once('value', pSnap => {
+            const pPic = pSnap.exists() ? pSnap.val() : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+            document.getElementById('profile-modal-img').src = pPic;
+        });
+
+        // අදාළ User ගේ කතා එකතු කර පළකළ පිළිවෙලට පෙන්වීම
+        const authorStories = [];
+        Object.keys(fullStoriesObjects).forEach(key => {
+            const s = fullStoriesObjects[key];
+            if(s.uPh === userId || s.user === userName) {
+                authorStories.push({ key: key, data: s });
+            }
+        });
+
+        // Newest First (අලුත්ම එක උඩට)
+        authorStories.sort((a, b) => (b.data.time || 0) - (a.data.time || 0));
+
+        profileList.innerHTML = "";
+        if(authorStories.length === 0) {
+            profileList.innerHTML = `<p style="color:#777; text-align:center;">මෙම කර්තෘ විසින් කිසිදු කතාවක් පළ කර නොමැත.</p>`;
+        } else {
+            authorStories.forEach(item => {
+                const s = item.data;
+                let title = s.text.split('\n')[0];
+                if(title.length > 35) title = title.substring(0, 35) + "...";
+                let dateStr = s.time ? new Date(s.time).toLocaleDateString() : "";
+                
+                profileList.innerHTML += `
+                    <div style="background:#222; padding:12px; border-radius:10px; margin-bottom:10px; border-left:4px solid var(--viber); cursor:pointer;" onclick="closeUserProfileModal(); viewFullStory('${item.key}')">
+                        <h4 style="margin:0 0 5px 0; color:#fff;">📖 ${title}</h4>
+                        <p style="margin:0; font-size:12px; color:#aaa;">${s.text.substring(0, 80)}...</p>
+                        <small style="color:#27ae60; font-size:10px; display:block; margin-top:5px;">📅 ${dateStr}</small>
+                    </div>
+                `;
+            });
+        }
+
+        document.getElementById('user-profile-modal').classList.remove('hidden');
+    }
+
+    function closeUserProfileModal() {
+        document.getElementById('user-profile-modal').classList.add('hidden');
     }
 
     function viewFullStory(key) {
@@ -382,7 +511,7 @@
         
         container.innerHTML = `
             <div class="card" style="background:transparent; border:none; padding:0;">
-                <h2>${s.user}</h2>
+                <h2 class="author-link" onclick="openUserProfile('${s.uPh}', '${s.user}')">${s.user}</h2>
                 <div style="white-space: pre-wrap; font-size:16px; line-height:1.6; margin-bottom:20px;">${formatText(s.text)}</div>
                 ${s.img ? `<img src="${s.img}" style="width:100%; border-radius:10px; margin-bottom:20px;">` : ''}
                 <div class="action-bar">

@@ -99,6 +99,10 @@
             <input id="login-email" type="email" placeholder="Enter Gmail address">
             <input id="login-pwd" type="password" placeholder="Enter Password">
             <button onclick="loginWithEmailPwd()" style="background:var(--viber); border:none; font-weight:bold; margin-top:15px;">LOGIN</button>
+            
+            <!-- 🧪 DEMO ACCOUNT / REVIEWER LOGIN BUTTON -->
+            <button onclick="loginAsDemoUser()" style="background:#27ae60; border:none; font-weight:bold; margin-top:10px;">🧪 LOG IN AS DEMO USER / REVIEWER</button>
+
             <p onclick="showForgotPwdView()" style="text-align:center; font-size:12px; cursor:pointer; color:#e74c3c; margin-top:15px; font-weight:bold;">Forgot Password?</p>
             <p onclick="showRegisterView()" class="auth-link">First time here? <b>Register Account</b></p>
         </div>
@@ -260,6 +264,22 @@
         if(loader) loader.style.display = 'none';
     }
 
+    /* 🧪 Reviewer / Demo User Direct Login Function */
+    function loginAsDemoUser() {
+        const demoEmail = "demouser@gmail.com";
+        const demoName = "Demo Tester";
+        const encodedEmail = btoa(demoEmail).replace(/=/g, "");
+        
+        db.ref('users/' + encodedEmail).set({ name: demoName, email: demoEmail }).then(() => {
+            localStorage.setItem("myId", encodedEmail);
+            localStorage.setItem("nm", demoName);
+            myId = encodedEmail;
+            myNm = demoName;
+            start();
+            hideLoader();
+        });
+    }
+
     function shareStory(key) {
         const s = fullStoriesObjects[key];
         if (navigator.share) {
@@ -275,6 +295,13 @@
 
     window.onload = () => {
         syncApp();
+        
+        if (myId) {
+            start();
+            hideLoader();
+            return;
+        }
+
         auth.onAuthStateChanged((user) => {
             if (user) {
                 if (user.emailVerified || user.email === ADMIN_EMAIL) {
@@ -295,9 +322,11 @@
                     hideLoader();
                 }
             } else { 
-                localStorage.clear(); 
-                myId = ""; 
-                showLoginView(); 
+                if(!myId) {
+                    localStorage.clear(); 
+                    myId = ""; 
+                    showLoginView(); 
+                }
                 hideLoader();
             }
         });
@@ -372,7 +401,7 @@
     function renderStoriesList(storiesMap) {
         const feed = document.getElementById('feed'); 
         feed.innerHTML = "";
-        const keys = Object.keys(storiesMap).reverse(); // අලුත්ම කතා උඩට එන සේ
+        const keys = Object.keys(storiesMap).reverse();
         
         if(keys.length === 0) {
             feed.innerHTML = `<p style="text-align:center; color:#777; margin-top:20px;">කිසිදු කතාවක් හමු වූයේ නැත.</p>`;
@@ -419,7 +448,6 @@
         });
     }
 
-    /* 🔍 Real-time Search Logic */
     function searchStoriesAndAuthors() {
         const query = document.getElementById('search-story-input').value.toLowerCase().trim();
         if(!query) {
@@ -439,7 +467,6 @@
         renderStoriesList(filtered);
     }
 
-    /* 👤 Open Profile Modal & Load Author Stories */
     function openUserProfile(userId, userName) {
         document.getElementById('profile-modal-name').innerText = userName;
         const profileList = document.getElementById('profile-stories-list');
@@ -450,7 +477,6 @@
             document.getElementById('profile-modal-img').src = pPic;
         });
 
-        // අදාළ User ගේ කතා එකතු කර පළකළ පිළිවෙලට පෙන්වීම
         const authorStories = [];
         Object.keys(fullStoriesObjects).forEach(key => {
             const s = fullStoriesObjects[key];
@@ -459,7 +485,6 @@
             }
         });
 
-        // Newest First (අලුත්ම එක උඩට)
         authorStories.sort((a, b) => (b.data.time || 0) - (a.data.time || 0));
 
         profileList.innerHTML = "";
